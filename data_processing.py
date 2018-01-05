@@ -219,7 +219,6 @@ def make_dataset(filename,name=None):
     print("Conver Corpus To Dataset!")
     start_time=time.time()
     corpus = file2corpus(filename); print("         corpus contains ", len(corpus), " sentences.")
-
     #保存基本组件,并且返回
     print("         ----saving component <tags_ids.csv> and <words_ids.csv>")
     df_data=make_component(corpus,name)
@@ -227,7 +226,7 @@ def make_dataset(filename,name=None):
 
     #读取组件,并且装换为合适的格式
     words2id, id2words, tags2id, id2tags =read_component(name)
-    #print(tags2id)
+    print("words2id.shape:",words2id.shape)
     print("         dataset contains ",df_data.shape[0]," sentences.")
 
     def X_padding(sentence):
@@ -265,24 +264,18 @@ def make_dataset(filename,name=None):
     print("         convert data and label to 'ids' represented")
     df_data['X'] = df_data['sentences'].apply(X_padding)
     df_data['y'] = df_data['tags'].apply(y_padding)
-
-    print(df_data["X"].head(5))
-    print(df_data["y"].head(5))
-
+    #print(df_data["X"].head(5))
+    #print(df_data["y"].head(5))
     #数据集切分
     df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
     df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
-
     #保存最终数据到pkl文件
     print("         ----saving final dataset <summary_train.pkl>")
     df_data_train.to_pickle(path="./dataset/"+name+"/summary_train.pkl")
-
     print("         ----saving final dataset <summary_validation.pkl>")
     df_data_validation.to_pickle(path="./dataset/"+name+"/summary_validation.pkl")
-
     print("         ----saving final dataset <summary_test.pkl>")
     df_data_test.to_pickle(path="./dataset/"+name+"/summary_test.pkl")
-
     duration=time.time()-start_time;
     print("END! this operation spends ",round(duration/60,2)," mins")
 
@@ -290,7 +283,6 @@ def make_dataset(filename,name=None):
 
 
 if __name__=="__main__":
-    '''
     print("[1]-->trans corpus to char corpus......")
     toCharCorpus(filename="./data/corpus/prosody.txt")
     print("[2]-->get embeddings......")
@@ -301,9 +293,9 @@ if __name__=="__main__":
     toPPH("./data/corpus/prosody.txt")
     print("[5]-->trans corpus to IPH format......")
     toIPH("./data/corpus/prosody.txt")
-    '''
+    print("[6]-->trans corpus to dataset......")
     make_dataset(filename="./data/corpus/prosody_pw.txt",name="temptest")
-    corpus=file2corpus(filename="./data/corpus/prosody_pw.txt")
+    #corpus=file2corpus(filename="./data/corpus/prosody_pw.txt")
 
 
 
