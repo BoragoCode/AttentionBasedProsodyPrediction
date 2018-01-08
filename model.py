@@ -1,3 +1,7 @@
+'''
+    model that without attension
+'''
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -79,24 +83,45 @@ class Seq2Seq():
         )
         '''
 
-
-
     # forward process and training process
     def fit(self,X_train,y_train,X_validation,y_validation,name,print_log=True):
         #---------------------------------------forward computation--------------------------------------------#
         #---------------------------------------define graph---------------------------------------------#
         with self.graph.as_default():
             # data place holder
-            self.X_p = tf.placeholder(
+            self.X_p_pw = tf.placeholder(
                     dtype=tf.int32,
                     shape=(None, self.max_sentence_size),
                     name="input_placeholder"
             )
-            self.y_p = tf.placeholder(
+            self.y_p_pw = tf.placeholder(
                     dtype=tf.int32,
                     shape=(None,self.max_sentence_size),
                     name="label_placeholder"
             )
+
+            self.X_p_pw = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="input_placeholder"
+            )
+            self.y_p_pw = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="label_placeholder"
+            )
+
+            self.X_p_pw = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="input_placeholder"
+            )
+            self.y_p_pw = tf.placeholder(
+                dtype=tf.int32,
+                shape=(None, self.max_sentence_size),
+                name="label_placeholder"
+            )
+
             #n
             self.class1_p = tf.placeholder(
                 dtype=tf.int32,
@@ -110,7 +135,6 @@ class Seq2Seq():
                 name="class_2"
             )
 
-
             #embeddings
             embeddings=tf.Variable(
                 initial_value=tf.zeros(shape=(self.vocab_size,self.embedding_size),dtype=tf.float32),
@@ -119,27 +143,28 @@ class Seq2Seq():
             #embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs=tf.nn.embedding_lookup(params=embeddings,ids=self.X_p,name="embeded_input")
 
-            #encoder
-            #forward part
-            en_lstm_forward1=rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            #lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            #lstm_forward=rnn.MultiRNNCell(cells=[lstm_forward1,lstm_forward2])
+            # encoder cells
+            # forward part
+            en_lstm_forward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            # en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            # en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
 
-            #backward part
-            en_lstm_backward1=rnn.BasicLSTMCell(num_units=self.hidden_units_num)
-            #lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
-            #lstm_backward=rnn.MultiRNNCell(cells=[lstm_backward1,lstm_backward2])
+            # backward part
+            en_lstm_backward1_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            # en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
 
-            #decoder
-            de_lstm = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            # decoder cells
+            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
 
-            #encode
-            encoder_outputs, encoder_states=self.encoder(
-                    cell_forward=en_lstm_backward1,
-                    cell_backward=en_lstm_backward1,
-                    inputs=inputs
+            # encode
+            encoder_outputs_pw, encoder_states_pw = self.encoder(
+                cell_forward=en_lstm_forward1_pw,
+                cell_backward=en_lstm_backward1_pw,
+                inputs=inputs
             )
-            h=self.decoder(cell=de_lstm,initial_state=encoder_states,inputs=encoder_outputs)
+            # shape of h is [batch*time_steps,hidden_units]
+            h_pw = self.decoder(cell=de_lstm_pw, initial_state=encoder_states_pw, inputs=encoder_outputs_pw)
 
             '''
              #result
@@ -160,93 +185,93 @@ class Seq2Seq():
             h=tf.reshape(tensor=h,shape=[-1,2*self.hidden_units_num2],name="h_reshaped")
             '''
 
-            #fully connect layer
-            w=tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num2,self.class_num)),
-                name="weights"
+            # fully connect layer(projection)
+            w_pw = tf.Variable(
+                initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
+                name="weights_pw"
             )
-            b=tf.Variable(
+            b_pw = tf.Variable(
                 initial_value=tf.random_normal(shape=(self.class_num,)),
-                name="bias"
+                name="bias_pw"
             )
-            logits=tf.matmul(h,w)+b          #shape of logits:[batch_size*max_time, 5]
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # shape of logits:[batch_size*max_time, 5]
 
-            #prediction
+            # prediction
             # shape of pred[batch_size*max_time, 1]
-            pred=tf.cast(tf.argmax(logits, 1), tf.int32,name="pred")
-            # pred in an normal way,shape is [batch_size, max_time]
-            pred_normal=tf.reshape(
-                tensor=pred,
-                shape=(-1,self.max_sentence_size),
+            pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")
+
+            # pred in an normal way,shape is [batch_size, max_time,1]
+            pred_normal_pw = tf.reshape(
+                tensor=pred_pw,
+                shape=(-1, self.max_sentence_size, 1),
                 name="pred_normal"
             )
-
-            #correct_prediction
-            correct_prediction = tf.equal(pred, tf.reshape(self.y_p, [-1]))
-            #accracy
-            self.accuracy=tf.reduce_mean(
-                input_tensor=tf.cast(x=correct_prediction,dtype=tf.float32),
-                name="accuracy"
+            # correct_prediction
+            correct_prediction_pw = tf.equal(pred_pw, tf.reshape(self.y_p, [-1]))
+            # accracy
+            self.accuracy_pw = tf.reduce_mean(
+                input_tensor=tf.cast(x=correct_prediction_pw, dtype=tf.float32),
+                name="accuracy_pw"
             )
-
             # class #1
             # class1=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=1)
-            basic_class_1 = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p, [-1])), dtype=tf.int32)
-            pred_class_1 = tf.cast(tf.equal(self.class1_p, tf.reshape(pred, [-1])), dtype=tf.int32)
-            correct_class_1 = tf.bitwise.bitwise_and(basic_class_1, pred_class_1)  # #1 prediction
-            self.accuracy_class_1 = tf.divide(
-                x=tf.reduce_sum(correct_class_1),
-                y=tf.reduce_sum(basic_class_1),
-                name="accuracy_class_1"
+            basic_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p, [-1])), dtype=tf.int32)
+            pred_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
+            correct_class_1_pw = tf.bitwise.bitwise_and(basic_class_1_pw, pred_class_1_pw)  # #1 prediction
+
+            self.accuracy_class_1_pw = tf.divide(
+                x=tf.reduce_sum(correct_class_1_pw),
+                y=tf.reduce_sum(basic_class_1_pw),
+                name="accuracy_class_1_pw"
             )
 
             # class #2
             # class2=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=2)
-            basic_class_2 = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p, [-1])), dtype=tf.int32)
-            pred_class_2 = tf.cast(tf.equal(self.class2_p, tf.reshape(pred, [-1])), dtype=tf.int32)
-            correct_class_2 = tf.bitwise.bitwise_and(basic_class_2, pred_class_2)  # #2 prediction
-            self.accuracy_class_2 = tf.divide(
-                x=tf.reduce_sum(correct_class_2),
-                y=tf.reduce_sum(basic_class_2),
-                name="accuracy_class_2"
+            basic_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p, [-1])), dtype=tf.int32)
+            pred_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
+            correct_class_2_pw = tf.bitwise.bitwise_and(basic_class_2_pw, pred_class_2_pw)  # #2 prediction
+            self.accuracy_class_2_pw = tf.divide(
+                x=tf.reduce_sum(correct_class_2_pw),
+                y=tf.reduce_sum(basic_class_2_pw),
+                name="accuracy_class_2_pw"
             )
 
-
-            #loss
-            self.loss=tf.losses.sparse_softmax_cross_entropy(
-                labels=tf.reshape(self.y_p,shape=[-1]),
-                logits=logits
+            # loss
+            self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
+                labels=tf.reshape(self.y_p, shape=[-1]),
+                logits=logits_pw
             )
+
             #optimizer
-            self.optimizer=tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            self.optimizer=tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss_pw)
 
             self.init_op=tf.global_variables_initializer()
         #------------------------------------Session-----------------------------------------
         with self.session as sess:
             print("Training Start")
-            sess.run(self.init_op)          #initialize all variables
+            sess.run(self.init_op)                  #initialize all variables
 
             train_Size = X_train.shape[0];
             validation_Size = X_validation.shape[0]
-            best_validation_accuracy = 0        #best validation accuracy in training process
+            best_validation_accuracy = 0            #best validation accuracy in training process
 
             for epoch in range(1,self.max_epoch+1):
                 print("Epoch:", epoch)
-                start_time=time.time()      #time evaluation
-                train_losses = [];  train_accus = []       # training loss/accuracy in every mini-batch
+                start_time=time.time()                      #time evaluation
+                train_losses = [];  train_accus = []        # training loss/accuracy in every mini-batch
                 c1_accus = [];  c2_accus = [];              # each class's accuracy
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
                     _, train_loss, train_accuracy = sess.run(
-                        fetches=[self.optimizer, self.loss, self.accuracy],
+                        fetches=[self.optimizer, self.loss_pw, self.accuracy_pw],
                         feed_dict={
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p: y_train[i * self.batch_size:(i + 1) * self.batch_size]
                         }
                     )
                     c1, c2= sess.run(
-                        fetches=[self.accuracy_class_1,
-                                 self.accuracy_class_2],
+                        fetches=[self.accuracy_class_1_pw,
+                                 self.accuracy_class_2_pw],
                         feed_dict={
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p: y_train[i * self.batch_size:(i + 1) * self.batch_size],
@@ -261,15 +286,11 @@ class Seq2Seq():
                     train_losses.append(train_loss); train_accus.append(train_accuracy)
                     c1_accus.append(c1);    c2_accus.append(c2)
 
-                validation_loss, validation_accuracy = sess.run(
-                    fetches=[self.loss, self.accuracy],
-                    feed_dict={self.X_p: X_validation,self.y_p: y_validation}
-                )
                 validation_loss, validation_accuracy, c1_va, c2_va = sess.run(
-                    fetches=[self.loss,
-                             self.accuracy,
-                             self.accuracy_class_1,
-                             self.accuracy_class_2],
+                    fetches=[self.loss_pw,
+                             self.accuracy_pw,
+                             self.accuracy_class_1_pw,
+                             self.accuracy_class_2_pw],
                     feed_dict={
                         self.X_p: X_validation,
                         self.y_p: y_validation,
@@ -343,23 +364,24 @@ class Seq2Seq():
     def infer(self,sentence,name):
         pass
 
+
 #train && test
 if __name__=="__main__":
     # 读数据
-    df_train = pd.read_pickle(path="./dataset/temptest/summary_train.pkl")
-    df_validation = pd.read_pickle(path="./dataset/temptest/summary_validation.pkl")
-    df_test = pd.read_pickle(path="./dataset/temptest/summary_test.pkl")
+    df_train_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_train.pkl")
+    df_validation_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_validation.pkl")
+    df_test_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_test.pkl")
 
-    X_train = np.asarray(list(df_train['X'].values))
-    y_train = np.asarray(list(df_train['y'].values))
-    X_validation = np.asarray(list(df_validation['X'].values))
-    y_validation = np.asarray(list(df_validation['y'].values))
-    X_test = np.asarray(list(df_test['X'].values))
-    y_test = np.asarray(list(df_test['y'].values))
+    X_train_pw = np.asarray(list(df_train_pw['X'].values))
+    y_train_pw = np.asarray(list(df_train_pw['y'].values))
+    X_validation_pw = np.asarray(list(df_validation_pw['X'].values))
+    y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
+    X_test_pw = np.asarray(list(df_test_pw['X'].values))
+    y_test_pw = np.asarray(list(df_test_pw['y'].values))
 
     # train model
     model = Seq2Seq()
-    model.fit(X_train, y_train, X_validation, y_validation, "test", False)
+    model.fit(X_train_pw, y_train_pw, X_validation_pw, y_validation_pw, "test", False)
 
     # testing model
     #accuracy = model.pred(name="test", X=X_test, y=y_test)

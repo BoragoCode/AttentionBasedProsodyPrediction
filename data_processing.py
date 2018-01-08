@@ -209,7 +209,7 @@ def read_component(name):
     return words2id, id2words, tags2id, id2tags
 
 
-def make_dataset(filename,name=None):
+def make_dataset(in_filename,project_name,out_filename):
     '''
     转换为最后模型适合的数据集,name表示转换后的数据集存储在哪个文件下面./dataset/name
     :param filename: 原始数据集的文件名
@@ -218,14 +218,14 @@ def make_dataset(filename,name=None):
     '''
     print("Conver Corpus To Dataset!")
     start_time=time.time()
-    corpus = file2corpus(filename); print("         corpus contains ", len(corpus), " sentences.")
+    corpus = file2corpus(in_filename); print("         corpus contains ", len(corpus), " sentences.")
     #保存基本组件,并且返回
     print("         ----saving component <tags_ids.csv> and <words_ids.csv>")
-    df_data=make_component(corpus,name)
+    df_data=make_component(corpus,project_name)
     #print(df_data.head(3))
 
     #读取组件,并且装换为合适的格式
-    words2id, id2words, tags2id, id2tags =read_component(name)
+    words2id, id2words, tags2id, id2tags =read_component(project_name)
     print("words2id.shape:",words2id.shape)
     print("         dataset contains ",df_data.shape[0]," sentences.")
 
@@ -269,32 +269,41 @@ def make_dataset(filename,name=None):
     #数据集切分
     df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
     df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
+
     #保存最终数据到pkl文件
-    print("         ----saving final dataset <summary_train.pkl>")
-    df_data_train.to_pickle(path="./dataset/"+name+"/summary_train.pkl")
+    print("         ----saving final dataset <"+out_filename+"_summary_train.pkl>")
+    df_data_train.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_train.pkl")
     print("         ----saving final dataset <summary_validation.pkl>")
-    df_data_validation.to_pickle(path="./dataset/"+name+"/summary_validation.pkl")
+    df_data_validation.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_validation.pkl")
     print("         ----saving final dataset <summary_test.pkl>")
-    df_data_test.to_pickle(path="./dataset/"+name+"/summary_test.pkl")
+    df_data_test.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_test.pkl")
     duration=time.time()-start_time;
     print("END! this operation spends ",round(duration/60,2)," mins")
 
 
-
+#summary_train.pkl
 
 if __name__=="__main__":
     print("[1]-->trans corpus to char corpus......")
     toCharCorpus(filename="./data/corpus/prosody.txt")
     print("[2]-->get embeddings......")
     toEmbeddings(filename="./data/corpus/prosody_char.txt")
+
     print("[3]-->trans corpus to PW format......")
     toPW("./data/corpus/prosody.txt")
     print("[4]-->trans corpus to PPH format......")
     toPPH("./data/corpus/prosody.txt")
     print("[5]-->trans corpus to IPH format......")
     toIPH("./data/corpus/prosody.txt")
-    print("[6]-->trans corpus to dataset......")
-    make_dataset(filename="./data/corpus/prosody_pw.txt",name="temptest")
+
+    print("[6]-->trans corpus_pw to dataset......")
+    make_dataset(in_filename="./data/corpus/prosody_pw.txt",project_name="temptest",out_filename="pw")
+
+    print("[7]-->trans corpus_pph to dataset......")
+    make_dataset(in_filename="./data/corpus/prosody_pph.txt", project_name="temptest", out_filename="pph")
+
+    print("[8]-->trans corpus_iph to dataset......")
+    make_dataset(in_filename="./data/corpus/prosody_iph.txt", project_name="temptest", out_filename="iph")
     #corpus=file2corpus(filename="./data/corpus/prosody_pw.txt")
 
 
