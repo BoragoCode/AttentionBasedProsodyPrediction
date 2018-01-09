@@ -147,12 +147,131 @@ class Seq2Seq():
                 name="embeddings"
             )
 
+            #---------------------------------/hierarchy:PW/-------------------------------------------#
+            # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
+            inputs_pw = tf.nn.embedding_lookup(params=embeddings, ids=self.X_p_pw, name="embeded_input_pw")
+            #encoder cells
+            #forward part
+            en_lstm_forward1_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            #en_lstm_forward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            #en_lstm_forward=rnn.MultiRNNCell(cells=[en_lstm_forward1,en_lstm_forward2])
+
+            #backward part
+            en_lstm_backward1_pw=rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            #en_lstm_backward2=rnn.BasicLSTMCell(num_units=self.hidden_units_num2)
+            #en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
+
+            #decoder cells
+            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+
+            #encode
+            #encoder_outputs_pw, encoder_states_pw=self.encoder(
+            #        cell_forward=en_lstm_forward1_pw,
+            #        cell_backward=en_lstm_backward1_pw,
+            #        inputs=inputs_pw
+            #)
+
+            # shape of h is [batch*time_steps,hidden_units]
+            # h_pw=self.decoder(cell=de_lstm_pw,initial_state=states_forward_pw,inputs=encoder_outputs_pw)
+
+            #encode
+            en_outputs_pw, en_states_pw = tf.nn.bidirectional_dynamic_rnn(
+                cell_fw=en_lstm_forward1_pw,
+                cell_bw=en_lstm_backward1_pw,
+                inputs=inputs_pw,
+                dtype=tf.float32,
+                scope="en_lstm_pw"
+            )
+            #print("shape of states:", states_pw)
+            outputs_forward_pw = en_outputs_pw[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
+            outputs_backward_pw = en_outputs_pw[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
+            # shape of h is [batch_size, max_time, cell_fw.output_size*2]
+            encoder_outputs_pw = tf.concat(values=[outputs_forward_pw, outputs_backward_pw], axis=2)
+            states_forward_pw = en_states_pw[0]
+
+            #decode
+            de_outputs_pw, de_states_pw = tf.nn.dynamic_rnn(
+                cell=de_lstm_pw,
+                inputs=encoder_outputs_pw,
+                initial_state=states_forward_pw,
+                scope="de_lstm_pw"
+            )
+
+            # outputs      #[batch_size,time_steps,hidden_size*2]
+            h_pw = tf.reshape(tensor=de_outputs_pw, shape=(-1, self.hidden_units_num))
+            #return decoder_outputs
+
+            #fully connect layer
+            w_pw=tf.Variable(
+                initial_value=tf.random_normal(shape=(self.hidden_units_num2,self.class_num)),
+                name="weights_pw"
+            )
+            b_pw=tf.Variable(
+                initial_value=tf.random_normal(shape=(self.class_num,)),
+                name="bias_pw"
+            )
+            logits_pw=tf.matmul(h_pw,w_pw)+b_pw          #shape of logits:[batch_size*max_time, 5]
+
+            #prediction
+            # shape of pred[batch_size*max_time, 1]
+            pred_pw=tf.cast(tf.argmax(logits_pw, 1), tf.int32,name="pred_pw")
+
+            # pred in an normal way,shape is [batch_size, max_time]
+            pred_normal_pw=tf.reshape(
+                tensor=pred_pw,
+                shape=(-1,self.max_sentence_size),
+                name="pred_normal"
+            )
+
+            # one-hot the pred_normal:[batch_size, max_time,class_num]
+            pred_normal_one_hot_pw=tf.one_hot(
+                indices=pred_normal_pw,
+                depth=self.class_num
+            )
+
+            #correct_prediction
+            correct_prediction_pw = tf.equal(pred_pw, tf.reshape(self.y_p_pw, [-1]))
+            #accracy
+            self.accuracy_pw=tf.reduce_mean(
+                input_tensor=tf.cast(x=correct_prediction_pw,dtype=tf.float32),
+                name="accuracy_pw"
+            )
+            # class #1
+            # class1=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=1)
+            basic_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p_pw, [-1])), dtype=tf.int32)
+            pred_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
+            correct_class_1_pw = tf.bitwise.bitwise_and(basic_class_1_pw, pred_class_1_pw)  # #1 prediction
+
+            self.accuracy_class_1_pw = tf.divide(
+                x=tf.reduce_sum(correct_class_1_pw),
+                y=tf.reduce_sum(basic_class_1_pw),
+                name="accuracy_class_1_pw"
+            )
+
+            # class #2
+            # class2=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=2)
+            basic_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p_pw, [-1])), dtype=tf.int32)
+            pred_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
+            correct_class_2_pw = tf.bitwise.bitwise_and(basic_class_2_pw, pred_class_2_pw)  # #2 prediction
+            self.accuracy_class_2_pw = tf.divide(
+                x=tf.reduce_sum(correct_class_2_pw),
+                y=tf.reduce_sum(basic_class_2_pw),
+                name="accuracy_class_2_pw"
+            )
+
+            #loss
+            self.loss_pw=tf.losses.sparse_softmax_cross_entropy(
+                labels=tf.reshape(self.y_p_pw,shape=[-1]),
+                logits=logits_pw
+            )
+            #--------------------------------------------------------------------------------------------#
+
             # ---------------------------------/hierarchy:PPH/-------------------------------------------#
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_pph = tf.nn.embedding_lookup(params=embeddings, ids=self.X_p_pph, name="embeded_input_pph")
             #this input use reuslts of pre stpes
             #shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
-            #inputs_pph=tf.concat(values=[inputs_pph,pred_normal_one_hot_pw],axis=2,name="inputs_pph")
+            inputs_pph=tf.concat(values=[inputs_pph,pred_normal_one_hot_pw],axis=2,name="inputs_pph")
             print("shape of input_pph:",inputs_pph.shape)
 
             # encoder
@@ -182,7 +301,8 @@ class Seq2Seq():
                 cell_fw=en_lstm_forward1_pph,
                 cell_bw=en_lstm_backward1_pph,
                 inputs=inputs_pph,
-                dtype=tf.float32
+                dtype=tf.float32,
+                scope="en_lstm_pph"
             )
 
             # print("shape of states:", states_pph)
@@ -195,7 +315,8 @@ class Seq2Seq():
             de_outputs_pph, de_states_pph = tf.nn.dynamic_rnn(
                 cell=de_lstm_pph,
                 inputs=encoder_outputs_pph,
-                initial_state=states_forward_pph
+                initial_state=states_forward_pph,
+                scope="de_lstm_pph"
             )
 
             # outputs      #[batch_size,time_steps,hidden_size*2]
@@ -211,7 +332,7 @@ class Seq2Seq():
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_pph"
             )
-            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 5]
+            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 3]
 
             # prediction
             # shape of pred[batch_size*max_time, 1]
@@ -267,7 +388,6 @@ class Seq2Seq():
             )
             # -------------------------------------------------------------------------------------------#
 
-            '''
             # ---------------------------------/hierarchy:IPH/-------------------------------------------#
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
             inputs_iph = tf.nn.embedding_lookup(params=embeddings, ids=self.X_p_iph, name="embeded_input_iph")
@@ -290,13 +410,40 @@ class Seq2Seq():
             de_lstm_iph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
 
             # encode
-            encoder_outputs_iph, encoder_states_iph = self.encoder(
-                cell_forward=en_lstm_forward1_iph,
-                cell_backward=en_lstm_backward1_iph,
-                inputs=inputs_iph
-            )
+            #encoder_outputs_iph, encoder_states_iph = self.encoder(
+            #    cell_forward=en_lstm_forward1_iph,
+            #    cell_backward=en_lstm_backward1_iph,
+            #    inputs=inputs_iph
+            #)
             # shape of h is [batch*time_steps,hidden_units]
-            h_iph = self.decoder(cell=de_lstm_iph, initial_state=encoder_states_iph, inputs=encoder_outputs_iph)
+            #h_iph = self.decoder(cell=de_lstm_iph, initial_state=encoder_states_iph, inputs=encoder_outputs_iph)
+
+            en_outputs_iph, en_states_iph = tf.nn.bidirectional_dynamic_rnn(
+                cell_fw=en_lstm_forward1_iph,
+                cell_bw=en_lstm_backward1_iph,
+                inputs=inputs_iph,
+                dtype=tf.float32,
+                scope="en_lstm_iph"
+            )
+
+            # print("shape of states:", states_iph)
+            outputs_forward_iph = en_outputs_iph[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
+            outputs_backward_iph = en_outputs_iph[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
+            # shape of h is [batch_size, max_time, cell_fw.output_size*2]
+            encoder_outputs_iph = tf.concat(values=[outputs_forward_iph, outputs_backward_iph], axis=2)
+            states_forward_iph = en_states_iph[0]
+
+            de_outputs_iph, de_states_iph = tf.nn.dynamic_rnn(
+                cell=de_lstm_iph,
+                inputs=encoder_outputs_iph,
+                initial_state=states_forward_iph,
+                scope="de_lstm_iph"
+            )
+
+            # outputs      #[batch_size,time_steps,hidden_size*2]
+            h_iph = tf.reshape(tensor=de_outputs_iph, shape=(-1, self.hidden_units_num))
+            # return decoder_outputs
+
 
             # fully connect layer
             w_iph = tf.Variable(
@@ -362,10 +509,9 @@ class Seq2Seq():
                 logits=logits_iph
             )
             # --------------------------------------------------------------------------------------------#
-            '''
 
             #loss
-            self.loss=self.loss_pph            #+self.loss_iph
+            self.loss=self.loss_pw+self.loss_pph            #+self.loss_iph
             #optimizer
             self.optimizer=tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
             self.init_op=tf.global_variables_initializer()
@@ -375,19 +521,24 @@ class Seq2Seq():
             print("Training Start")
             sess.run(self.init_op)          #initialize all variables
 
-            train_Size = X_train_pw.shape[0];
-            validation_Size = X_validation_pw.shape[0]
+            train_Size = X_train_pph.shape[0];
+            validation_Size = X_validation_pph.shape[0]
             best_validation_accuracy = 0        #best validation accuracy in training process
 
             for epoch in range(1,self.max_epoch+1):
                 print("Epoch:", epoch)
                 start_time=time.time()      #time evaluation
-                train_losses_pw = [];  train_accus_pw = []       # training loss/accuracy in every mini-batch
+                # training loss/accuracy in every mini-batch
+                train_losses= []
+                train_accus_pw = []
+                train_accus_pph = []
+                train_accus_iph = []
+                
                 #c1_accus = [];  c2_accus = [];              # each class's accuracy
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    _, train_loss, train_accuracy_pw = sess.run(
-                        fetches=[self.optimizer, self.loss, self.accuracy_pph],
+                    _, train_loss, train_accuracy_pw,train_accuracy_pph,train_accuracy_iph = sess.run(
+                        fetches=[self.optimizer, self.loss, self.accuracy_pw,self.accuracy_pph,self.accuracy_iph],
                         feed_dict={
                             self.X_p_pw:X_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw:y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -397,9 +548,11 @@ class Seq2Seq():
                             self.y_p_iph: y_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
                         }
                     )
-                    print("train_loss:",train_loss)
-                    print("train_accuracy_pw:",train_accuracy_pw)
-                    '''
+                    #print("train_loss:",train_loss)
+                    #print("train_accuracy_pw:",train_accuracy_pw)
+                    #print("train_accuracy_pph:", train_accuracy_pph)
+                    #print("train_accuracy_iph:", train_accuracy_iph)
+
                     c1, c2= sess.run(
                         fetches=[self.accuracy_class_1,
                                  self.accuracy_class_2],
@@ -410,6 +563,7 @@ class Seq2Seq():
                             self.class2_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=2)
                         }
                     )
+
                     # print training infomation
                     if (print_log):
                         self.showInfo(print_log,train_loss,train_accuracy)
@@ -439,6 +593,7 @@ class Seq2Seq():
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_accuracy < validation_accuracy:
                     print("New Best Accuracy ",validation_accuracy," On Validation set! ")
+                    '''
                     print("Saving Models......")
                     #exist ./models folder?
                     if not os.path.exists("./models/"):
@@ -452,7 +607,8 @@ class Seq2Seq():
                     saver.save(sess, "./models/"+name+"/bilstm/my-model-10000")
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/"+name+"/bilstm/my-model-10000.meta")
-                '''
+                    '''
+
 
     #返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self,name,X,y=None,):
