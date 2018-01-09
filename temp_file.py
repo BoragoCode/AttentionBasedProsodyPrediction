@@ -29,17 +29,6 @@ class Seq2Seq():
         self.vocab_size=parameter.VOCAB_SIZE
         self.batch_size=parameter.BATCH_SIZE
 
-    # display accuracy and loss information
-    def showInfo(self, print_log=False, loss=None, accuracy=None, train_losses=None, train_accus=None):
-        if print_log:
-            print("----training loss  : ", loss)
-            print("----train accuracy : ", accuracy)
-            print()
-        else:
-            print("----average training loss       : ", sum(train_losses) / len(train_losses))
-            print("----average training accuracy   : ", sum(train_accus) / len(train_accus))
-            print("----average validation loss     : ", loss)
-            print("----average validation accuracy : ", accuracy)
 
     #encoder,传入是前向和后向的cell,还有inputs
     #输出是
@@ -89,6 +78,8 @@ class Seq2Seq():
         X_train_pw=X_train[0];  X_train_pph=X_train[1]; X_train_iph=X_train[2]
         y_train_pw = y_train[0];y_train_pph = y_train[1];y_train_iph = X_train[2]
 
+        print("X_train_pph.shape:",X_train_pph.shape)
+        print("type of X_train_pph:",X_train_pph.dtype)
         X_validation_pw = X_validation[0];X_validation_pph = X_validation[1];X_validation_iph = X_validation[2]
         y_validation_pw = y_validation[0];y_validation_pph = y_validation[1];y_validation_iph = y_validation[2]
 
@@ -98,34 +89,34 @@ class Seq2Seq():
             self.X_p_pw = tf.placeholder(
                     dtype=tf.int32,
                     shape=(None, self.max_sentence_size),
-                    name="input_placeholder"
+                    name="input_placeholder_pw"
             )
             self.y_p_pw = tf.placeholder(
                     dtype=tf.int32,
                     shape=(None,self.max_sentence_size),
-                    name="label_placeholder"
+                    name="label_placeholder_pw"
             )
 
             self.X_p_pph = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
-                name="input_placeholder"
+                name="input_placeholder_pph"
             )
             self.y_p_pph = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
-                name="label_placeholder"
+                name="label_placeholder_pph"
             )
 
             self.X_p_iph = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
-                name="input_placeholder"
+                name="input_placeholder_iph"
             )
             self.y_p_iph = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.max_sentence_size),
-                name="label_placeholder"
+                name="label_placeholder_iph"
             )
 
             #n
@@ -533,12 +524,19 @@ class Seq2Seq():
                 train_accus_pw = []
                 train_accus_pph = []
                 train_accus_iph = []
-                
-                #c1_accus = [];  c2_accus = [];              # each class's accuracy
+
+                c1_accus_pw = [];  c2_accus_pw = [];                # each class's accuracy
+                c1_accus_pph = [];  c2_accus_pph = [];              # each class's accuracy
+                c1_accus_iph = [];  c2_accus_iph = [];              # each class's accuracy
+
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    _, train_loss, train_accuracy_pw,train_accuracy_pph,train_accuracy_iph = sess.run(
-                        fetches=[self.optimizer, self.loss, self.accuracy_pw,self.accuracy_pph,self.accuracy_iph],
+                    _, train_loss, train_accuracy_pw,train_accuracy_pph,train_accuracy_iph,\
+                        c1_pw, c2_pw,c1_pph, c2_pph,c1_iph, c2_iph= sess.run(
+                        fetches=[self.optimizer, self.loss, self.accuracy_pw,self.accuracy_pph,self.accuracy_iph,
+                                 self.accuracy_class_1_pw,self.accuracy_class_2_pw,
+                                 self.accuracy_class_1_pph,self.accuracy_class_2_pph,
+                                 self.accuracy_class_1_iph,self.accuracy_class_2_iph],
                         feed_dict={
                             self.X_p_pw:X_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw:y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -546,54 +544,78 @@ class Seq2Seq():
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.X_p_iph: X_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_iph: y_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
+                            self.class1_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=1),
+                            self.class2_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=2)
                         }
                     )
+                    #append to list
+                    train_losses.append(train_loss)
+                    train_accus_pw.append(train_accuracy_pw)
+                    train_accus_pph.append(train_accuracy_pph)
+                    train_accus_iph.append(train_accuracy_iph)
+                    c1_accus_pw.append(c1_pw)
+                    c2_accus_pw.append(c2_pw)
+                    c1_accus_pph.append(c1_pph)
+                    c2_accus_pph.append(c2_pph)
+                    c1_accus_iph.append(c1_iph)
+                    c2_accus_iph.append(c2_iph)
                     #print("train_loss:",train_loss)
                     #print("train_accuracy_pw:",train_accuracy_pw)
                     #print("train_accuracy_pph:", train_accuracy_pph)
                     #print("train_accuracy_iph:", train_accuracy_iph)
 
-                    c1, c2= sess.run(
-                        fetches=[self.accuracy_class_1,
-                                 self.accuracy_class_2],
-                        feed_dict={
-                            self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p: y_train[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.class1_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=1),
-                            self.class2_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=2)
-                        }
-                    )
 
-                    # print training infomation
-                    if (print_log):
-                        self.showInfo(print_log,train_loss,train_accuracy)
-                    # add to list
-                    train_losses.append(train_loss); train_accus.append(train_accuracy)
-                    c1_accus.append(c1);    c2_accus.append(c2)
-
-                validation_loss, validation_accuracy, c1_va, c2_va = sess.run(
-                    fetches=[self.loss,
-                             self.accuracy,
-                             self.accuracy_class_1,
-                             self.accuracy_class_2],
+                validation_loss, validation_accuracy_pw, validation_accuracy_pph,validation_accuracy_iph,\
+                c1_va_pw, c2_va_pw,c1_va_pph, c2_va_pph, c1_va_iph, c2_va_iph,= sess.run(
+                    fetches=[self.loss,self.accuracy_pw,self.accuracy_pph,self.accuracy_iph,
+                             self.accuracy_class_1_pw,self.accuracy_class_2_pw,
+                             self.accuracy_class_1_pph, self.accuracy_class_2_pph,
+                             self.accuracy_class_1_iph, self.accuracy_class_2_iph],
                     feed_dict={
-                        self.X_p: X_validation,
-                        self.y_p: y_validation,
-                        self.class1_p: np.full(shape=(X_validation.shape[0] * self.max_sentence_size,), fill_value=1),
-                        self.class2_p: np.full(shape=(X_validation.shape[0] * self.max_sentence_size,), fill_value=2)
+                        self.X_p_pw: X_validation_pw,self.y_p_pw: y_validation_pw,
+                        self.X_p_pph: X_validation_pph, self.y_p_pph: y_validation_pph,
+                        self.X_p_iph: X_validation_iph, self.y_p_iph: y_validation_iph,
+                        self.class1_p: np.full(shape=(X_validation_pw.shape[0] * self.max_sentence_size,), fill_value=1),
+                        self.class2_p: np.full(shape=(X_validation_pw.shape[0] * self.max_sentence_size,), fill_value=2)
                     }
                 )
-                print("Epoch ",epoch," finished.","spend ",round((time.time()-start_time)/60,2)," mins")
-                self.showInfo(False, validation_loss, validation_accuracy, train_losses, train_accus)
-                print("----average training accuracy of class 1:", sum(c1_accus) / len(c1_accus))
-                print("----average training accuracy of class 2:", sum(c2_accus) / len(c2_accus))
-                print("----average validation accuracy of class 1:", c1_va)
-                print("----average validation accuracy of class 2:", c2_va)
 
+                #show information
+                print("Epoch ",epoch," finished.","spend ",round((time.time()-start_time)/60,2)," mins")
+                print("Training info:")
+                print("----avarage training loss:",sum(train_losses)/len(train_losses))
+                print("----avarage accuracy of pw:", sum(train_accus_pw) / len(train_accus_pw))
+                print("----avarage accuracy of pph:", sum(train_accus_pph) / len(train_accus_pph))
+                print("----avarage accuracy of iph:", sum(train_accus_iph) / len(train_accus_iph))
+
+
+                print("----avarage accuracy of class_1_pw:", sum(c1_accus_pw) / len(c1_accus_pw))
+                print("----avarage accuracy of class_2_pw:", sum(c2_accus_pw) / len(c2_accus_pw))
+                print("----avarage accuracy of class_1_pph:", sum(c1_accus_pph) / len(c1_accus_pph))
+                print("----avarage accuracy of class_2_pph:", sum(c2_accus_pph) / len(c2_accus_pph))
+                print("----avarage accuracy of class_1_iph:", sum(c1_accus_iph) / len(c1_accus_iph))
+                print("----avarage accuracy of class_2_iph:", sum(c2_accus_iph) / len(c2_accus_iph))
+
+
+                print("Validation info:")
+                print("----avarage validation loss:", validation_loss)
+                print("----avarage accuracy of pw:", validation_accuracy_pw)
+                print("----avarage accuracy of pph:", validation_accuracy_pph)
+                print("----avarage accuracy of iph:", validation_accuracy_iph)
+
+                print("----avarage accuracy of class_1_pw:", c1_va_pw)
+                print("----avarage accuracy of class_2_pw:", c2_va_pw)
+                print("----avarage accuracy of class_1_pph:", c1_va_pph)
+                print("----avarage accuracy of class_2_pph:", c2_va_pph)
+                print("----avarage accuracy of class_1_iph:", c1_va_iph)
+                print("----avarage accuracy of class_2_iph:", c2_va_iph)
+
+
+                '''
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_accuracy < validation_accuracy:
                     print("New Best Accuracy ",validation_accuracy," On Validation set! ")
-                    '''
+                  
                     print("Saving Models......")
                     #exist ./models folder?
                     if not os.path.exists("./models/"):
@@ -651,48 +673,3 @@ class Seq2Seq():
     def infer(self,sentence,name):
         pass
 
-#train && test
-if __name__=="__main__":
-    # 读数据
-    df_train_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_train.pkl")
-    df_validation_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_validation.pkl")
-    df_test_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_test.pkl")
-    X_train_pw = np.asarray(list(df_train_pw['X'].values))
-    y_train_pw = np.asarray(list(df_train_pw['y'].values))
-    X_validation_pw = np.asarray(list(df_validation_pw['X'].values))
-    y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
-    X_test_pw = np.asarray(list(df_test_pw['X'].values))
-    y_test_pw = np.asarray(list(df_test_pw['y'].values))
-
-    df_train_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_train.pkl")
-    df_validation_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_validation.pkl")
-    df_test_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_test.pkl")
-    X_train_pph = np.asarray(list(df_train_pph['X'].values))
-    y_train_pph = np.asarray(list(df_train_pph['y'].values))
-    X_validation_pph = np.asarray(list(df_validation_pph['X'].values))
-    y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
-    X_test_pph = np.asarray(list(df_test_pph['X'].values))
-    y_test_pph = np.asarray(list(df_test_pph['y'].values))
-
-    df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
-    df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
-    df_test_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_test.pkl")
-    X_train_iph = np.asarray(list(df_train_iph['X'].values))
-    y_train_iph = np.asarray(list(df_train_iph['y'].values))
-    X_validation_iph = np.asarray(list(df_validation_iph['X'].values))
-    y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
-    X_test_iph = np.asarray(list(df_test_iph['X'].values))
-    y_test_iph = np.asarray(list(df_test_iph['y'].values))
-
-    X_train=[X_train_pw,X_test_pph,X_train_iph]
-    y_train=[y_train_pw,y_train_pph,y_train_iph]
-    X_validation=[X_validation_pw,X_validation_pph,X_validation_iph]
-    y_validation=[y_validation_pw,y_validation_pph,y_validation_iph]
-
-    # train model
-    model = Seq2Seq()
-    model.fit(X_train, y_train, X_validation, y_validation, "test", False)
-
-    # testing model
-    # accuracy = model.pred(name="test", X=X_test, y=y_test)
-    # print(accuracy)
