@@ -34,18 +34,6 @@ class Attension_Alignment_Seq2Seq():
         self.vocab_size=parameter.VOCAB_SIZE
         self.batch_size=parameter.BATCH_SIZE
 
-    # display accuracy and loss information
-    def showInfo(self, print_log=False, loss=None, accuracy=None, train_losses=None, train_accus=None):
-        if print_log:
-            print("----training loss  : ", loss)
-            print("----train accuracy : ", accuracy)
-            print()
-        else:
-            print("----average training loss       : ", sum(train_losses) / len(train_losses))
-            print("----average training accuracy   : ", sum(train_accus) / len(train_accus))
-            print("----average validation loss     : ", loss)
-            print("----average validation accuracy : ", accuracy)
-
 
     #encoder,传入是前向和后向的cell,还有inputs
     #输出是
@@ -88,21 +76,11 @@ class Attension_Alignment_Seq2Seq():
     # forward process and training process
     def fit(self,X_train,y_train,X_validation,y_validation,name,print_log=True):
         #---------------------------------------forward computation--------------------------------------------#
-        X_train_pw = X_train[0]
-        X_train_pph = X_train[1]
-        X_train_iph = X_train[2]
+        X_train_pw = X_train[0];X_train_pph = X_train[1];X_train_iph = X_train[2]
+        y_train_pw = y_train[0];y_train_pph = y_train[1];y_train_iph = y_train[2]
 
-        y_train_pw = y_train[0]
-        y_train_pph = y_train[1]
-        y_train_iph = y_train[2]
-
-        X_validation_pw = X_validation[0]
-        X_validation_pph = X_validation[1]
-        X_validation_iph = X_validation[2]
-
-        y_validation_pw = y_validation[0]
-        y_validation_pph = y_validation[1]
-        y_validation_iph = y_validation[2]
+        X_validation_pw = X_validation[0];X_validation_pph = X_validation[1];X_validation_iph = X_validation[2]
+        y_validation_pw = y_validation[0];y_validation_pph = y_validation[1];y_validation_iph = y_validation[2]
 
         #---------------------------------------define graph---------------------------------------------#
         with self.graph.as_default():
