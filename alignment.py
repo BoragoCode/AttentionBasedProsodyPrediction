@@ -1,5 +1,5 @@
 '''
-    model that without attension
+    model with attention
 '''
 
 import numpy as np
@@ -10,8 +10,13 @@ import tensorflow.contrib.seq2seq as seq2seq
 import time
 import os
 import parameter
+import util
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
 
-class Alignment_Seq2Seq():
+class Attension_Alignment_Seq2Seq():
     def __init__(self):
         # basic environment
         self.graph = tf.Graph()
@@ -136,20 +141,6 @@ class Alignment_Seq2Seq():
                 name="label_placeholder_iph"
             )
 
-
-            #n
-            self.class1_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,),
-                name="class_1"
-            )
-            #b
-            self.class2_p = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,),
-                name="class_2"
-            )
-
             #embeddings
             self.embeddings=tf.Variable(
                 initial_value=tf.zeros(shape=(self.vocab_size,self.embedding_size),dtype=tf.float32),
@@ -198,7 +189,7 @@ class Alignment_Seq2Seq():
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_pw"
             )
-            logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # shape of logits:[batch_size*max_time, 5]
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # shape of logits:[batch_size*max_time, 3]
 
             # prediction
             # shape of pred[batch_size*max_time, 1]
@@ -218,42 +209,13 @@ class Alignment_Seq2Seq():
                 name="pred_normal_one_hot_pw"
             )
 
-            # correct_prediction
-            correct_prediction_pw = tf.equal(pred_pw, tf.reshape(self.y_p_pw, [-1]))
-            # accracy
-            self.accuracy_pw = tf.reduce_mean(
-                input_tensor=tf.cast(x=correct_prediction_pw, dtype=tf.float32),
-                name="accuracy_pw"
-            )
-            # class #1
-            # class1=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=1)
-            basic_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p_pw, [-1])), dtype=tf.int32)
-            pred_class_1_pw = tf.cast(tf.equal(self.class1_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
-            correct_class_1_pw = tf.bitwise.bitwise_and(basic_class_1_pw, pred_class_1_pw)  # #1 prediction
-
-            self.accuracy_class_1_pw = tf.divide(
-                x=tf.reduce_sum(correct_class_1_pw),
-                y=tf.reduce_sum(basic_class_1_pw),
-                name="accuracy_class_1_pw"
-            )
-
-            # class #2
-            # class2=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=2)
-            basic_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p_pw, [-1])), dtype=tf.int32)
-            pred_class_2_pw = tf.cast(tf.equal(self.class2_p, tf.reshape(pred_pw, [-1])), dtype=tf.int32)
-            correct_class_2_pw = tf.bitwise.bitwise_and(basic_class_2_pw, pred_class_2_pw)  # #2 prediction
-            self.accuracy_class_2_pw = tf.divide(
-                x=tf.reduce_sum(correct_class_2_pw),
-                y=tf.reduce_sum(basic_class_2_pw),
-                name="accuracy_class_2_pw"
-            )
-
             # loss
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
                 labels=tf.reshape(self.y_p_pw, shape=[-1]),
                 logits=logits_pw
             )
             #---------------------------------------------------------------------------------------
+
 
             #----------------------------------PPH--------------------------------------------------
             # embeded inputs:[batch_size,MAX_TIME_STPES,embedding_size]
@@ -317,36 +279,6 @@ class Alignment_Seq2Seq():
                 indices=pred_normal_pph,
                 depth=self.class_num,
                 name="pred_normal_one_hot_pph"
-            )
-
-            # correct_prediction
-            correct_prediction_pph = tf.equal(pred_pph, tf.reshape(self.y_p_pph, [-1]))
-            # accracy
-            self.accuracy_pph = tf.reduce_mean(
-                input_tensor=tf.cast(x=correct_prediction_pph, dtype=tf.float32),
-                name="accuracy_pph"
-            )
-            # class #1
-            # class1=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=1)
-            basic_class_1_pph = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p_pph, [-1])), dtype=tf.int32)
-            pred_class_1_pph = tf.cast(tf.equal(self.class1_p, tf.reshape(pred_pph, [-1])), dtype=tf.int32)
-            correct_class_1_pph = tf.bitwise.bitwise_and(basic_class_1_pph, pred_class_1_pph)  # #1 prediction
-
-            self.accuracy_class_1_pph = tf.divide(
-                x=tf.reduce_sum(correct_class_1_pph),
-                y=tf.reduce_sum(basic_class_1_pph),
-                name="accuracy_class_1_pph"
-            )
-
-            # class #2
-            # class2=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=2)
-            basic_class_2_pph = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p_pph, [-1])), dtype=tf.int32)
-            pred_class_2_pph = tf.cast(tf.equal(self.class2_p, tf.reshape(pred_pph, [-1])), dtype=tf.int32)
-            correct_class_2_pph = tf.bitwise.bitwise_and(basic_class_2_pph, pred_class_2_pph)  # #2 prediction
-            self.accuracy_class_2_pph = tf.divide(
-                x=tf.reduce_sum(correct_class_2_pph),
-                y=tf.reduce_sum(basic_class_2_pph),
-                name="accuracy_class_2_pph"
             )
 
             # loss
@@ -420,36 +352,6 @@ class Alignment_Seq2Seq():
                 name="pred_normal_one_hot_iph"
             )
 
-            # correct_prediction
-            correct_prediction_iph = tf.equal(pred_iph, tf.reshape(self.y_p_iph, [-1]))
-            # accracy
-            self.accuracy_iph = tf.reduce_mean(
-                input_tensor=tf.cast(x=correct_prediction_iph, dtype=tf.float32),
-                name="accuracy_iph"
-            )
-            # class #1
-            # class1=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=1)
-            basic_class_1_iph = tf.cast(tf.equal(self.class1_p, tf.reshape(self.y_p_iph, [-1])), dtype=tf.int32)
-            pred_class_1_iph = tf.cast(tf.equal(self.class1_p, tf.reshape(pred_iph, [-1])), dtype=tf.int32)
-            correct_class_1_iph = tf.bitwise.bitwise_and(basic_class_1_iph, pred_class_1_iph)  # #1 prediction
-
-            self.accuracy_class_1_iph = tf.divide(
-                x=tf.reduce_sum(correct_class_1_iph),
-                y=tf.reduce_sum(basic_class_1_iph),
-                name="accuracy_class_1_iph"
-            )
-
-            # class #2
-            # class2=np.full(shape=(self.batch_size*self.max_sentence_size,),fill_value=2)
-            basic_class_2_iph = tf.cast(tf.equal(self.class2_p, tf.reshape(self.y_p_iph, [-1])), dtype=tf.int32)
-            pred_class_2_iph = tf.cast(tf.equal(self.class2_p, tf.reshape(pred_iph, [-1])), dtype=tf.int32)
-            correct_class_2_iph = tf.bitwise.bitwise_and(basic_class_2_iph, pred_class_2_iph)  # #2 prediction
-            self.accuracy_class_2_iph = tf.divide(
-                x=tf.reduce_sum(correct_class_2_iph),
-                y=tf.reduce_sum(basic_class_2_iph),
-                name="accuracy_class_2_iph"
-            )
-
             # loss
             self.loss_iph = tf.losses.sparse_softmax_cross_entropy(
                 labels=tf.reshape(self.y_p_iph, shape=[-1]),
@@ -461,17 +363,20 @@ class Alignment_Seq2Seq():
             self.loss=self.loss_pw+self.loss_pph+self.loss_iph
             #optimizer
             self.optimizer=tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-
             self.init_op=tf.global_variables_initializer()
+            self.init_local_op=tf.local_variables_initializer()
+
         #------------------------------------Session-----------------------------------------
         with self.session as sess:
             print("Training Start")
             sess.run(self.init_op)  # initialize all variables
+            sess.run(self.init_local_op)
 
-            train_Size = X_train_iph.shape[0];
-            validation_Size = X_validation_iph.shape[0]
+            train_Size = X_train_pw.shape[0];
+            validation_Size = X_validation_pw.shape[0]
             best_validation_loss = 0  # best validation accuracy in training process
 
+            #epoch
             for epoch in range(1, self.max_epoch + 1):
                 print("Epoch:", epoch)
                 start_time = time.time()  # time evaluation
@@ -481,41 +386,14 @@ class Alignment_Seq2Seq():
                 train_accus_pph = []
                 train_accus_iph = []
 
-                c1_accus_pw = [];
-                c2_accus_pw = [];  # each class's accuracy
-                c1_accus_pph = [];
-                c2_accus_pph = [];  # each class's accuracy
-                c1_accus_iph = [];
-                c2_accus_iph = [];  # each class's accuracy
-
-                '''
-                # mini batch
-                for i in range(0, (train_Size // self.batch_size)):
-                    _, train_loss, train_accuracy, c1, c2, logits = sess.run(
-                        fetches=[self.optimizer, self.loss_pw, self.accuracy_pw,
-                                 self.accuracy_class_1_pw, self.accuracy_class_2_pw, logits_pw],
-                        feed_dict={
-                            self.X_p_pw: X_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.y_p_pw: y_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.class1_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=1),
-                            self.class2_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=2)
-                        }
-                    )
-                    # print("logits_iph:", logits)
-                    print("train_loss:", train_loss)
-                    print("train_accuracy:", train_accuracy)
-                    print("c1:", c1)
-                    print("c2:", c2)
-                '''
+                c1_f_pw = [];   c2_f_pw = []  # each class's f1 score
+                c1_f_pph = [];  c2_f_pph = []
+                c1_f_iph = [];  c2_f_iph = []
 
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    _, train_loss, train_accuracy_pw, train_accuracy_pph, train_accuracy_iph, \
-                    c1_pw, c2_pw, c1_pph, c2_pph, c1_iph, c2_iph = sess.run(
-                        fetches=[self.optimizer, self.loss, self.accuracy_pw, self.accuracy_pph, self.accuracy_iph,
-                                 self.accuracy_class_1_pw, self.accuracy_class_2_pw,
-                                 self.accuracy_class_1_pph, self.accuracy_class_2_pph,
-                                 self.accuracy_class_1_iph, self.accuracy_class_2_iph],
+                    _, train_loss, train_pred_pw,train_pred_pph,train_pred_iph= sess.run(
+                        fetches=[self.optimizer, self.loss, pred_pw,pred_pph,pred_iph],
                         feed_dict={
                             self.X_p_pw: X_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -523,69 +401,100 @@ class Alignment_Seq2Seq():
                             self.y_p_pph: y_train_pph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.X_p_iph: X_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_iph: y_train_iph[i * self.batch_size:(i + 1) * self.batch_size],
-                            self.class1_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=1),
-                            self.class2_p: np.full(shape=(self.batch_size * self.max_sentence_size,), fill_value=2)
                         }
                     )
 
-                    # append to list
+                    #loss
                     train_losses.append(train_loss)
-                    train_accus_pw.append(train_accuracy_pw)
-                    train_accus_pph.append(train_accuracy_pph)
-                    train_accus_iph.append(train_accuracy_iph)
-                    c1_accus_pw.append(c1_pw)
-                    c2_accus_pw.append(c2_pw)
-                    c1_accus_pph.append(c1_pph)
-                    c2_accus_pph.append(c2_pph)
-                    c1_accus_iph.append(c1_iph)
-                    c2_accus_iph.append(c2_iph)
-                    # print("train_loss:",train_loss)
-                    # print("train_accuracy_pw:",train_accuracy_pw)
-                    # print("train_accuracy_pph:", train_accuracy_pph)
-                    # print("train_accuracy_iph:", train_accuracy_iph)
+                    # metrics
+                    #pw
+                    accuracy_pw, f1_1_pw,f1_2_pw = util.eval(
+                        y_true=np.reshape(y_train_pw[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
+                        y_pred=train_pred_pw
+                    )
 
-                validation_loss, validation_accuracy_pw, validation_accuracy_pph, validation_accuracy_iph, \
-                c1_va_pw, c2_va_pw, c1_va_pph, c2_va_pph, c1_va_iph, c2_va_iph, = sess.run(
-                    fetches=[self.loss, self.accuracy_pw, self.accuracy_pph, self.accuracy_iph,
-                             self.accuracy_class_1_pw, self.accuracy_class_2_pw,
-                             self.accuracy_class_1_pph, self.accuracy_class_2_pph,
-                             self.accuracy_class_1_iph, self.accuracy_class_2_iph],
+                    # pph
+                    accuracy_pph, f1_1_pph, f1_2_pph = util.eval(
+                        y_true=np.reshape(y_train_pph[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
+                        y_pred=train_pred_pph
+                    )
+
+                    # iph
+                    accuracy_iph,f1_1_iph, f1_2_iph = util.eval(
+                        y_true=np.reshape(y_train_iph[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
+                        y_pred=train_pred_iph
+                    )
+                    train_accus_pw.append(accuracy_pw)
+                    train_accus_pph.append(accuracy_pph)
+                    train_accus_iph.append(accuracy_iph)
+                    #F1-score
+                    c1_f_pw.append(f1_1_pw);    c2_f_pw.append(f1_2_pw)
+                    c1_f_pph.append(f1_1_pph);  c2_f_pph.append(f1_2_pph)
+                    c1_f_iph.append(f1_1_iph);  c2_f_iph.append(f1_2_iph)
+
+                #validation in every epoch
+                validation_loss, valid_pred_pw,valid_pred_pph,valid_pred_iph= sess.run(
+                    fetches=[self.loss, pred_pw,pred_pph,pred_iph],
                     feed_dict={
                         self.X_p_pw: X_validation_pw, self.y_p_pw: y_validation_pw,
                         self.X_p_pph: X_validation_pph, self.y_p_pph: y_validation_pph,
-                        self.X_p_iph: X_validation_iph, self.y_p_iph: y_validation_iph,
-                        self.class1_p: np.full(shape=(X_validation_pw.shape[0] * self.max_sentence_size,),
-                                               fill_value=1),
-                        self.class2_p: np.full(shape=(X_validation_pw.shape[0] * self.max_sentence_size,), fill_value=2)
+                        self.X_p_iph: X_validation_iph, self.y_p_iph: y_validation_iph
                     }
                 )
+                # metrics
+                # pw
+                valid_accuracy_pw, valid_f1_1_pw, valid_f1_2_pw = util.eval(
+                    y_true=np.reshape(y_validation_pw, [-1]),
+                    y_pred=valid_pred_pw
+                )
+
+                # pph
+                valid_accuracy_pph, valid_f1_1_pph, valid_f1_2_pph = util.eval(
+                    y_true=np.reshape(y_validation_pph, [-1]),
+                    y_pred=valid_pred_pph
+                )
+
+                # iph
+                valid_accuracy_iph, valid_f1_1_iph, valid_f1_2_iph = util.eval(
+                    y_true=np.reshape(y_validation_iph, [-1]),
+                    y_pred=valid_pred_iph
+                )
+
+
+
                 # show information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
-                print("Training info:")
+                print("                     /**Training info**/")
                 print("----avarage training loss:", sum(train_losses) / len(train_losses))
-                print("----avarage accuracy of pw:", sum(train_accus_pw) / len(train_accus_pw))
-                print("----avarage accuracy of pph:", sum(train_accus_pph) / len(train_accus_pph))
-                print("----avarage accuracy of iph:", sum(train_accus_iph) / len(train_accus_iph))
+                print("PW:")
+                print("----avarage accuracy:", sum(train_accus_pw) / len(train_accus_pw))
+                print("----avarage f1-Score of N:", sum(c1_f_pw) / len(c1_f_pw))
+                print("----avarage f1-Score of B:", sum(c2_f_pw) / len(c2_f_pw))
+                print("PPH:")
+                print("----avarage accuracy :", sum(train_accus_pph) / len(train_accus_pph))
+                print("----avarage f1-Score of N:", sum(c1_f_pph) / len(c1_f_pph))
+                print("----avarage f1-Score of B:", sum(c2_f_pph) / len(c2_f_pph))
+                print("IPH:")
+                print("----avarage accuracy:", sum(train_accus_iph) / len(train_accus_iph))
+                print("----avarage f1-Score of N:", sum(c1_f_iph) / len(c1_f_iph))
+                print("----avarage f1-Score of B:", sum(c2_f_iph) / len(c2_f_iph))
+                print()
 
-                print("----avarage accuracy of class_1_pw:", sum(c1_accus_pw) / len(c1_accus_pw))
-                print("----avarage accuracy of class_2_pw:", sum(c2_accus_pw) / len(c2_accus_pw))
-                print("----avarage accuracy of class_1_pph:", sum(c1_accus_pph) / len(c1_accus_pph))
-                print("----avarage accuracy of class_2_pph:", sum(c2_accus_pph) / len(c2_accus_pph))
-                print("----avarage accuracy of class_1_iph:", sum(c1_accus_iph) / len(c1_accus_iph))
-                print("----avarage accuracy of class_2_iph:", sum(c2_accus_iph) / len(c2_accus_iph))
-
-                print("Validation info:")
+                print("                     /**Validation info**/")
                 print("----avarage validation loss:", validation_loss)
-                print("----avarage accuracy of pw:", validation_accuracy_pw)
-                print("----avarage accuracy of pph:", validation_accuracy_pph)
-                print("----avarage accuracy of iph:", validation_accuracy_iph)
-
-                print("----avarage accuracy of class_1_pw:", c1_va_pw)
-                print("----avarage accuracy of class_2_pw:", c2_va_pw)
-                print("----avarage accuracy of class_1_pph:", c1_va_pph)
-                print("----avarage accuracy of class_2_pph:", c2_va_pph)
-                print("----avarage accuracy of class_1_iph:", c1_va_iph)
-                print("----avarage accuracy of class_2_iph:", c2_va_iph)
+                print("PW:")
+                print("----avarage accuracy:", valid_accuracy_pw)
+                print("----avarage f1-Score of N:", valid_f1_1_pw)
+                print("----avarage f1-Score of B:", valid_f1_2_pw)
+                print("PPH:")
+                print("----avarage accuracy :", valid_accuracy_pph)
+                print("----avarage f1-Score of N:", valid_f1_1_pph)
+                print("----avarage f1-Score of B:", valid_f1_2_pph)
+                print("IPH:")
+                print("----avarage accuracy:", valid_accuracy_iph)
+                print("----avarage f1-Score of N:", valid_f1_1_iph)
+                print("----avarage f1-Score of B:", valid_f1_2_iph)
+                print("\n\n")
 
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_loss < validation_loss:
@@ -604,7 +513,6 @@ class Alignment_Seq2Seq():
                     saver.save(sess, "./models/"+name+"/bilstm/my-model-10000")
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/"+name+"/bilstm/my-model-10000.meta")
-
 
 
     #返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
@@ -662,6 +570,7 @@ if __name__=="__main__":
     X_test_pw = np.asarray(list(df_test_pw['X'].values))
     y_test_pw = np.asarray(list(df_test_pw['y'].values))
 
+
     df_train_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_train.pkl")
     df_validation_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_validation.pkl")
     df_test_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_test.pkl")
@@ -687,7 +596,7 @@ if __name__=="__main__":
     X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph, y_validation_iph]
 
-    model = Alignment_Seq2Seq()
+    model = Attension_Alignment_Seq2Seq()
     model.fit(X_train, y_train, X_validation, y_validation, "test", False)
 
     # testing model

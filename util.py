@@ -1,9 +1,47 @@
-df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
-df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
-df_test_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_test.pkl")
-X_train_iph = np.asarray(list(df_train_iph['X'].values))
-y_train_iph = np.asarray(list(df_train_iph['y'].values))
-X_validation_iph = np.asarray(list(df_validation_iph['X'].values))
-y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
-X_test_iph = np.asarray(list(df_test_iph['X'].values))
-y_test_iph = np.asarray(list(df_test_iph['y'].values))
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+
+#compute accuracy,precison,recall and f1
+def eval(y_true,y_pred):
+    #accuracy
+    accuracy=accuracy_score(y_true=y_true,y_pred=y_pred)
+
+    #class 1
+    binarized_y_true_1=binarize(sequence=y_true,positive_value=1)
+    binarized_y_pred_1=binarize(sequence=y_pred,positive_value=1)
+    recall_1=recall_score(y_true=binarized_y_true_1,y_pred=binarized_y_pred_1)
+    precision_1=precision_score(y_true=binarized_y_true_1,y_pred=binarized_y_pred_1)
+    f_1=f1_score(y_true=binarized_y_true_1,y_pred=binarized_y_pred_1)
+
+    # class 2
+    binarized_y_true_2 = binarize(sequence=y_true, positive_value=2)
+    binarized_y_pred_2 = binarize(sequence=y_pred, positive_value=2)
+    recall_2 = recall_score(y_true=binarized_y_true_2, y_pred=binarized_y_pred_2)
+    precision_2 = precision_score(y_true=binarized_y_true_2, y_pred=binarized_y_pred_2)
+    f_2 = f1_score(y_true=binarized_y_true_2, y_pred=binarized_y_pred_2)
+
+    return accuracy,f_1,f_2
+
+#以positive_value为正类别,来二值化一个sequence.
+def binarize(sequence,positive_value):
+    #deep copy
+    temp_sequence=sequence.copy()
+    temp_sequence[temp_sequence!=positive_value]=0
+    temp_sequence[temp_sequence==positive_value]=1
+    return temp_sequence
+
+if __name__ =="__main__":
+    a=np.array([1,2,3,4,0,5,6,7,1,1,2,1,0])
+    print(a)
+    result=binarize(sequence=a,positive_value=1)
+    print(result)
+    print(a)
+
+
+
+
+
