@@ -13,7 +13,7 @@ MAX_EPOCH=30                        #最大迭代次数
 LAYER_NUM=2                         #lstm层数2
 HIDDEN_UNITS_NUM=128                #隐藏层结点数量
 HIDDEN_UNITS_NUM2=128               #隐藏层2结点数量
-BATCH_SIZE=1024                     #batch大小
+BATCH_SIZE=500                     #batch大小
 DROPOUT_RATE=0.5                    #dropout 比率
 
 

@@ -1,5 +1,8 @@
 '''
-    model with attention
+        /******model with attention********/
+        author:xierhacker
+        time:2018.1.08
+
 '''
 
 import numpy as np
@@ -59,7 +62,6 @@ class Attension_Alignment_Seq2Seq():
         #print(type(encoder_states))
         return encoder_outputs,states_forward
 
-
     def decoder(self,cell,initial_state,inputs,scope_name):
         outputs,states=tf.nn.dynamic_rnn(
             cell=cell,
@@ -118,8 +120,8 @@ class Attension_Alignment_Seq2Seq():
         #print("type of init state:",init_state)
         #print("shape of init state:",init_state.shape)
         for i in range(self.max_sentence_size):
-            if i > 0:
-                tf.get_variable_scope().reuse_variables()
+            #if i > 0:
+                #tf.get_variable_scope().reuse_variables()
             c_i = self.attention(state, enc_outputs)                #[batch_size,hidden_units_num*2]
             inp=tf.concat(values=[enc_outputs[:,i,:],c_i],axis=1)   #[batch_size,hidden_units_num*4]
             #print("shape of inp:",inp.shape)
@@ -265,8 +267,6 @@ class Attension_Alignment_Seq2Seq():
                 init_state=encoder_states_pw,
                 enc_outputs=encoder_outputs_pw
             )
-
-
             #h_pw = self.decode(self.dec_lstm_cell, enc_state, enc_outputs)
             #h_pw = self.decoder(
             #    cell=de_lstm_pw,
@@ -284,7 +284,6 @@ class Attension_Alignment_Seq2Seq():
             # shape of h is [batch*time_steps,hidden_units]
             
             '''
-
             # fully connect layer(projection)
             w_pw = tf.Variable(
                 initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
@@ -473,7 +472,6 @@ class Attension_Alignment_Seq2Seq():
             self.init_local_op=tf.local_variables_initializer()
 
         #------------------------------------Session-----------------------------------------
-
         with self.session as sess:
             print("Training Start")
             sess.run(self.init_op)  # initialize all variables
