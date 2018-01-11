@@ -12,7 +12,7 @@
 >scikit-learn
 
 
-## **Stpes**
+## **Steps**
 ##### 1.run `python data_processing` 
 >conver corpus and make dataset format.
 
