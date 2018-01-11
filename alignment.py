@@ -438,8 +438,6 @@ class Attension_Alignment_Seq2Seq():
                     y_pred=valid_pred_iph
                 )
 
-
-
                 # show information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
                 print("                     /**Training info**/")
