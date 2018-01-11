@@ -200,7 +200,7 @@ class Attension_Alignment_Seq2Seq():
             inputs_pph = tf.nn.embedding_lookup(params=self.embeddings, ids=self.X_p_pph, name="embeded_input_pph")
             # shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
             inputs_pph = tf.concat(values=[inputs_pph, pred_normal_one_hot_pw], axis=2, name="inputs_pph")
-            print("shape of input_pph:", inputs_pph.shape)
+            #print("shape of input_pph:", inputs_pph.shape)
 
             # encoder cells
             # forward part
@@ -271,7 +271,7 @@ class Attension_Alignment_Seq2Seq():
             inputs_iph = tf.nn.embedding_lookup(params=self.embeddings, ids=self.X_p_iph, name="embeded_input_iph")
             # shape of inputs[batch_size,max_time_stpes,embeddings_dims+class_num]
             inputs_iph = tf.concat(values=[inputs_iph, pred_normal_one_hot_pph], axis=2, name="inputs_pph")
-            print("shape of input_pph:", inputs_pph.shape)
+            #print("shape of input_pph:", inputs_pph.shape)
             # encoder cells
             # forward part
             en_lstm_forward1_iph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
@@ -419,6 +419,10 @@ class Attension_Alignment_Seq2Seq():
                         self.X_p_iph: X_validation_iph, self.y_p_iph: y_validation_iph
                     }
                 )
+                #print("valid_pred_pw.shape:",valid_pred_pw.shape)
+                #print("valid_pred_pph.shape:",valid_pred_pph.shape)
+                #print("valid_pred_iph.shape:",valid_pred_iph.shape)
+
                 # metrics
                 # pw
                 valid_accuracy_pw, valid_f1_1_pw, valid_f1_2_pw = util.eval(
@@ -438,9 +442,10 @@ class Attension_Alignment_Seq2Seq():
                     y_pred=valid_pred_iph
                 )
 
+
                 # show information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
-                print("                     /**Training info**/")
+                print("                             /**Training info**/")
                 print("----avarage training loss:", sum(train_losses) / len(train_losses))
                 print("PW:")
                 print("----avarage accuracy:", sum(train_accus_pw) / len(train_accus_pw))
@@ -456,7 +461,7 @@ class Attension_Alignment_Seq2Seq():
                 print("----avarage f1-Score of B:", sum(c2_f_iph) / len(c2_f_iph))
                 print()
 
-                print("                     /**Validation info**/")
+                print("                             /**Validation info**/")
                 print("----avarage validation loss:", validation_loss)
                 print("PW:")
                 print("----avarage accuracy:", valid_accuracy_pw)
@@ -470,13 +475,12 @@ class Attension_Alignment_Seq2Seq():
                 print("----avarage accuracy:", valid_accuracy_iph)
                 print("----avarage f1-Score of N:", valid_f1_1_iph)
                 print("----avarage f1-Score of B:", valid_f1_2_iph)
-                print("\n\n")
 
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_loss < validation_loss:
                     best_validation_loss=validation_loss
                     print("New Best loss ",best_validation_loss," On Validation set! ")
-                    print("Saving Models......")
+                    print("Saving Models......\n\n")
                     #exist ./models folder?
                     if not os.path.exists("./models/"):
                         os.mkdir(path="./models/")
@@ -490,6 +494,24 @@ class Attension_Alignment_Seq2Seq():
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/"+name+"/bilstm/my-model-10000.meta")
 
+                #test:using X_validation_pw
+                test_pred_pw, test_pred_pph, test_pred_iph = sess.run(
+                    fetches=[pred_pw, pred_pph, pred_iph],
+                    feed_dict={
+                        self.X_p_pw: X_validation_pw,
+                        self.X_p_pph: X_validation_pw,
+                        self.X_p_iph: X_validation_pw
+                    }
+                )
+                # recover to original corpus txt
+                # shape of valid_pred_pw,valid_pred_pw,valid_pred_pw:[corpus_size*time_stpes]
+                util.recover(
+                    X=X_validation_pw,
+                    preds_pw=test_pred_pw,
+                    preds_pph=test_pred_pph,
+                    preds_iph=test_pred_iph,
+                    filename="recover_epoch_"+str(epoch)+".txt"
+                )
 
     #返回预测的结果或者准确率,y not None的时候返回准确率,y ==None的时候返回预测值
     def pred(self,name,X,y=None,):
@@ -572,8 +594,18 @@ if __name__=="__main__":
     X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph, y_validation_iph]
 
+    #print("X_validation_pw:",X_validation_pw)
+    #print("X_validation_pph:",X_validation_pph)
+    #print("X_validation_iph",X_validation_iph)
+
+    #print("X_train_pw:", X_train_pw)
+    #print("X_train_pph:", X_train_pph)
+    #print("X_train_iph", X_train_iph)
+
     model = Attension_Alignment_Seq2Seq()
     model.fit(X_train, y_train, X_validation, y_validation, "test", False)
+    #print(""X_validation_pw)
+
 
     # testing model
     #accuracy = model.pred(name="test", X=X_test, y=y_test)
