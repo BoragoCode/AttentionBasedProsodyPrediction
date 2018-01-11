@@ -1,8 +1,8 @@
 '''
-    author:xierhacker 2018.1.4
     清洗数据,转换语料格式,得到字嵌入
+    author:xierhacker
+    time:2018.1.4
 '''
-
 import re
 import os
 import time
@@ -266,17 +266,22 @@ def make_dataset(in_filename,project_name,out_filename):
     df_data['y'] = df_data['tags'].apply(y_padding)
     #print(df_data["X"].head(5))
     #print(df_data["y"].head(5))
-    #数据集切分
-    df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
-    df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
+
+    #数据集切分0.2 比例
+    df_data_train=df_data[:40000]
+    df_data_validation=df_data[40000:]
+    #df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
+    #df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
 
     #保存最终数据到pkl文件
     print("         ----saving final dataset <"+out_filename+"_summary_train.pkl>")
     df_data_train.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_train.pkl")
+
     print("         ----saving final dataset <summary_validation.pkl>")
     df_data_validation.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_validation.pkl")
-    print("         ----saving final dataset <summary_test.pkl>")
-    df_data_test.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_test.pkl")
+
+    #print("         ----saving final dataset <summary_test.pkl>")
+    #df_data_test.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_test.pkl")
     duration=time.time()-start_time;
     print("END! this operation spends ",round(duration/60,2)," mins")
 
@@ -284,9 +289,9 @@ def make_dataset(in_filename,project_name,out_filename):
 #summary_train.pkl
 
 if __name__=="__main__":
-    print("[1]-->trans corpus to char corpus......")
+    print("[1]-->trans corpus to char corpus and saving......")
     toCharCorpus(filename="./data/corpus/prosody.txt")
-    print("[2]-->get embeddings......")
+    print("[2]-->get embeddings and saving......")
     toEmbeddings(filename="./data/corpus/prosody_char.txt")
 
     print("[3]-->trans corpus to PW format......")
