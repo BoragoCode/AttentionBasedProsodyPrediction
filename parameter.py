@@ -5,7 +5,7 @@
 
 #can modify
 LEARNING_RATE=0.01                 #学习率
-MAX_SENTENCE_SIZE=24                #固定句子长度为24
+MAX_SENTENCE_SIZE=59                #固定句子长度为59 (从整个数据集得来)
 TIMESTEP_SIZE=MAX_SENTENCE_SIZE     #LSTM的time_step应该和句子长度一致
 INPUT_SIZE=EMBEDDING_SIZE=1001      #嵌入向量维度,和输入大小应当一样
 DECAY=0.85

@@ -190,6 +190,7 @@ def make_component(corpus,name):
     # tags以及对应的id组件
     pd.DataFrame(data={"tags":tags,"id":tags_id}).\
         to_csv(path_or_buf="./dataset/"+name+"/tags_ids.csv",index=False,encoding="utf_8")
+    print("max_sentence_size:",df_data["sentence_len"].max())
     return df_data      #暂时不保存,返回
 
 def read_component(name):
@@ -270,8 +271,8 @@ def make_dataset(in_filename,project_name,out_filename):
     #print(df_data["y"].head(5))
 
     #数据集切分0.2 比例
-    df_data_train=df_data[:40000]
-    df_data_validation=df_data[40000:]
+    df_data_train=df_data[:47176]
+    df_data_validation=df_data[47176:]
     #df_data_train,df_data_test=train_test_split(df_data,test_size=0.2)              #训练集和测试集
     #df_data_train,df_data_validation=train_test_split(df_data_train,test_size=0.1)  #训练集和验证集
 
@@ -311,8 +312,6 @@ if __name__=="__main__":
 
     #print("[8]-->trans corpus_iph to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_iph.txt", project_name="temptest", out_filename="iph")
-
-
 
 
 
