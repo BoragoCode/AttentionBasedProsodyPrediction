@@ -86,15 +86,6 @@ def recover(X,preds_pw,preds_pph,preds_iph,filename):
     f.write(doc)
     f.close()
 
-
-
-
-
-
-
-
-
-
 if __name__ =="__main__":
     a=np.array([1,2,3,4,0,5,6,7,1,1,2,1,0])
     print(a)

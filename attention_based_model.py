@@ -14,10 +14,6 @@ import time
 import os
 import parameter
 import util
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
 
 class Attension_Alignment_Seq2Seq():
     def __init__(self):
@@ -114,24 +110,25 @@ class Attension_Alignment_Seq2Seq():
 
 
     def decode(self, cell, init_state, enc_outputs, loop_function=None):
-        outputs = []
-        prev = None
-        state = init_state
-        #print("type of init state:",init_state)
-        #print("shape of init state:",init_state.shape)
-        for i in range(self.max_sentence_size):
-            #if i > 0:
-                #tf.get_variable_scope().reuse_variables()
-            c_i = self.attention(state, enc_outputs)                #[batch_size,hidden_units_num*2]
-            inp=tf.concat(values=[enc_outputs[:,i,:],c_i],axis=1)   #[batch_size,hidden_units_num*4]
-            #print("shape of inp:",inp.shape)
-            output, state = cell(inp, state)                      #shape of output[batch_size,hidden_units_size]
-            #print("shape of output:",output.shape)
-            outputs.append(output)
-        #print("len of output:",len(outputs))
-        outputs=tf.concat(values=outputs,axis=0)        #outputs:[batch_size*timesteps,hiddem_units_num]
-        #print("shape of outputs:",outputs.shape)
-        return outputs
+        with tf.variable_scope(name_or_scope="decode_pw",reuse=tf.AUTO_REUSE):
+            outputs = []
+            prev = None
+            state = init_state
+            #print("type of init state:",init_state)
+            #print("shape of init state:",init_state.shape)
+            for i in range(self.max_sentence_size):
+                if i > 0:
+                    tf.get_variable_scope().reuse_variables()
+                c_i = self.attention(state, enc_outputs)                #[batch_size,hidden_units_num*2]
+                inp=tf.concat(values=[enc_outputs[:,i,:],c_i],axis=1)   #[batch_size,hidden_units_num*4]
+                #print("shape of inp:",inp.shape)
+                output, state = cell(inp, state,scope="de_lstm")                      #shape of output[batch_size,hidden_units_size]
+                #print("shape of output:",output.shape)
+                outputs.append(output)
+            #print("len of output:",len(outputs))
+            outputs=tf.concat(values=outputs,axis=0)        #outputs:[batch_size*timesteps,hiddem_units_num]
+            #print("shape of outputs:",outputs.shape)
+            return outputs
 
         '''
         for i, inp in enumerate(self.decoder_inputs_emb):
@@ -245,7 +242,7 @@ class Attension_Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
 
             # decoder cells
-            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num,reuse=tf.AUTO_REUSE)
 
             # encode
             encoder_outputs_pw, encoder_states_pw = self.encoder(
@@ -693,34 +690,28 @@ if __name__=="__main__":
     # 读数据
     df_train_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_train.pkl")
     df_validation_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_validation.pkl")
-    df_test_pw = pd.read_pickle(path="./dataset/temptest/pw_summary_test.pkl")
     X_train_pw = np.asarray(list(df_train_pw['X'].values))
     y_train_pw = np.asarray(list(df_train_pw['y'].values))
     X_validation_pw = np.asarray(list(df_validation_pw['X'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
-    X_test_pw = np.asarray(list(df_test_pw['X'].values))
-    y_test_pw = np.asarray(list(df_test_pw['y'].values))
+
 
 
     df_train_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_train.pkl")
     df_validation_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_validation.pkl")
-    df_test_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_test.pkl")
     X_train_pph = np.asarray(list(df_train_pph['X'].values))
     y_train_pph = np.asarray(list(df_train_pph['y'].values))
     X_validation_pph = np.asarray(list(df_validation_pph['X'].values))
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
-    X_test_pph = np.asarray(list(df_test_pph['X'].values))
-    y_test_pph = np.asarray(list(df_test_pph['y'].values))
+
 
     df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
     df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
-    df_test_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_test.pkl")
     X_train_iph = np.asarray(list(df_train_iph['X'].values))
     y_train_iph = np.asarray(list(df_train_iph['y'].values))
     X_validation_iph = np.asarray(list(df_validation_iph['X'].values))
     y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
-    X_test_iph = np.asarray(list(df_test_iph['X'].values))
-    y_test_iph = np.asarray(list(df_test_iph['y'].values))
+
 
     X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph, y_train_iph]

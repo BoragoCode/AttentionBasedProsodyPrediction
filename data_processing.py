@@ -37,6 +37,8 @@ def toEmbeddings(filename):
     sentences = word2vec.Text8Corpus(filename)
     model = word2vec.Word2Vec(sentences=sentences, size=1001)
     # save embeddings file
+    if not os.path.exists("./data/embeddings"):
+        os.mkdir(path="./data/embeddings")
     model.wv.save_word2vec_format("./data/embeddings/vec.txt", binary=False)
 
 
@@ -301,15 +303,15 @@ if __name__=="__main__":
     print("[5]-->trans corpus to IPH format......")
     toIPH("./data/corpus/prosody.txt")
 
-    print("[6]-->trans corpus_pw to dataset......")
+    #print("[6]-->trans corpus_pw to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_pw.txt",project_name="temptest",out_filename="pw")
 
-    print("[7]-->trans corpus_pph to dataset......")
+    #print("[7]-->trans corpus_pph to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_pph.txt", project_name="temptest", out_filename="pph")
 
-    print("[8]-->trans corpus_iph to dataset......")
+    #print("[8]-->trans corpus_iph to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_iph.txt", project_name="temptest", out_filename="iph")
-    #corpus=file2corpus(filename="./data/corpus/prosody_pw.txt")
+
 
 
 

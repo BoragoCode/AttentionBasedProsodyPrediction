@@ -11,10 +11,6 @@ import time
 import os
 import parameter
 import util
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
 
 class Attension_Alignment_Seq2Seq():
     def __init__(self):
@@ -565,14 +561,12 @@ if __name__=="__main__":
     X_validation_pw = np.asarray(list(df_validation_pw['X'].values))
     y_validation_pw = np.asarray(list(df_validation_pw['y'].values))
 
-
     df_train_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_train.pkl")
     df_validation_pph = pd.read_pickle(path="./dataset/temptest/pph_summary_validation.pkl")
     X_train_pph = np.asarray(list(df_train_pph['X'].values))
     y_train_pph = np.asarray(list(df_train_pph['y'].values))
     X_validation_pph = np.asarray(list(df_validation_pph['X'].values))
     y_validation_pph = np.asarray(list(df_validation_pph['y'].values))
-
 
     df_train_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_train.pkl")
     df_validation_iph = pd.read_pickle(path="./dataset/temptest/iph_summary_validation.pkl")
@@ -581,25 +575,10 @@ if __name__=="__main__":
     X_validation_iph = np.asarray(list(df_validation_iph['X'].values))
     y_validation_iph = np.asarray(list(df_validation_iph['y'].values))
 
-
     X_train = [X_train_pw, X_train_pph, X_train_iph]
     y_train = [y_train_pw, y_train_pph, y_train_iph]
     X_validation = [X_validation_pw, X_validation_pph, X_validation_iph]
     y_validation = [y_validation_pw, y_validation_pph, y_validation_iph]
 
-    print("X_validation_pw:",X_validation_pw)
-    print("X_validation_pph:",X_validation_pph)
-    print("X_validation_iph",X_validation_iph)
-
-    print("X_train_pw:", X_train_pw)
-    print("X_train_pph:", X_train_pph)
-    print("X_train_iph", X_train_iph)
-
     model = Attension_Alignment_Seq2Seq()
     model.fit(X_train, y_train, X_validation, y_validation, "test", False)
-    #print(""X_validation_pw)
-
-
-    # testing model
-    #accuracy = model.pred(name="test", X=X_test, y=y_test)
-    #print(accuracy)
