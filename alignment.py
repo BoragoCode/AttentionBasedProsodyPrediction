@@ -473,7 +473,6 @@ class Attension_Alignment_Seq2Seq():
                 print("----avarage accuracy:", valid_accuracy_iph)
                 print("----avarage f1-Score of N:", valid_f1_1_iph)
                 print("----avarage f1-Score of B:", valid_f1_2_iph)
-                print("\n\n")
 
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_loss < validation_loss:
@@ -492,12 +491,13 @@ class Attension_Alignment_Seq2Seq():
                     saver.save(sess, "./models/"+name+"/bilstm/my-model-10000")
                     # Generates MetaGraphDef.
                     saver.export_meta_graph("./models/"+name+"/bilstm/my-model-10000.meta")
-
+                print("\n\n")
                 #test:using X_validation_pw
                 test_pred_pw, test_pred_pph, test_pred_iph = sess.run(
                     fetches=[pred_pw, pred_pph, pred_iph],
                     feed_dict={
-                        self.X_p: X_validation
+                        self.X_p: X_validation,
+                        self.seq_len_p:len_validation
                     }
                 )
                 # recover to original corpus txt
