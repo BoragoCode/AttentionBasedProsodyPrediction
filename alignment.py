@@ -166,15 +166,17 @@ class Attension_Alignment_Seq2Seq():
             logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # shape of logits:[batch_size*max_time, 3]
 
             # prediction
-            # shape of pred[batch_size*max_time, 1]
+            # shape of pred[batch_size*max_time, ]
             pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")
+            print("shape of pred_pw:",pred_pw.shape)
 
-            # pred in an normal way,shape is [batch_size, max_time,1]
+            # pred in an normal way,shape is [batch_size, max_time]
             pred_normal_pw = tf.reshape(
                 tensor=pred_pw,
                 shape=(-1, self.max_sentence_size),
                 name="pred_normal"
             )
+            print("shape of pred_normal_pw:",pred_normal_pw.shape)
 
             # one-hot the pred_normal:[batch_size, max_time,class_num]
             pred_normal_one_hot_pw = tf.one_hot(
@@ -182,6 +184,11 @@ class Attension_Alignment_Seq2Seq():
                 depth=self.class_num,
                 name="pred_normal_one_hot_pw"
             )
+
+            #we should use more accurate result to compute loss
+            #depadding
+
+
 
             # loss
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
@@ -547,9 +554,12 @@ class Attension_Alignment_Seq2Seq():
                 print("this operation spends ", round((time.time() - start_time) / 60, 2), " mins")
                 return accu
 
-    #把一个句子转成一个分词后的结构
-    def infer(self,sentence,name):
-        pass
+
+    def showInfo(self,type):
+        if tpye=="training":
+            pass
+        else:
+            pass
 
 
 #train && test
