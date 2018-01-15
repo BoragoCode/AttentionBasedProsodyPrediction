@@ -12,7 +12,6 @@ import os
 import parameter
 import util
 
-
 class Attension_Alignment_Seq2Seq():
     def __init__(self):
         # basic environment
@@ -110,7 +109,30 @@ class Attension_Alignment_Seq2Seq():
                 dtype=tf.int32,
                 shape=(None,),
                 name="seq_len"
+            )
 
+            #用来去掉padding的mask
+            self.mask = tf.sequence_mask(
+                lengths=self.seq_len_p,
+                maxlen=self.max_sentence_size,
+                name="mask"
+            )
+
+            #去掉padding之后的labels
+            y_p_pw_masked = tf.boolean_mask(                #shape[seq_len1+seq_len2+....+,]
+                tensor=self.y_p_pw,
+                mask=self.mask,
+                name="y_p_pw_masked"
+            )
+            y_p_pph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
+                tensor=self.y_p_pph,
+                mask=self.mask,
+                name="y_p_pph_masked"
+            )
+            y_p_iph_masked = tf.boolean_mask(               # shape[seq_len1+seq_len2+....+,]
+                tensor=self.y_p_iph,
+                mask=self.mask,
+                name="y_p_iph_masked"
             )
 
             # embeddings
@@ -152,7 +174,6 @@ class Attension_Alignment_Seq2Seq():
                 inputs=encoder_outputs_pw,
                 scope_name="de_lstm_pw"
             )
-
             # fully connect layer(projection)
             w_pw = tf.Variable(
                 initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
@@ -162,35 +183,43 @@ class Attension_Alignment_Seq2Seq():
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_pw"
             )
-            logits_pw = tf.matmul(h_pw, w_pw) + b_pw  # shape of logits:[batch_size*max_time, 3]
+            #logits
+            logits_pw = tf.matmul(h_pw, w_pw) + b_pw        #logits_pw:[batch_size*max_time, 3]
+            logits_normal_pw=tf.reshape(                    #logits in an normal way:[batch_size,max_time_stpes,3]
+                tensor=logits_pw,
+                shape=(-1,self.max_sentence_size,3),
+                name="logits_normal_pw"
+            )
+            logits_pw_masked = tf.boolean_mask(             # logits_pw_masked [seq_len1+seq_len2+....+,3]
+                tensor=logits_normal_pw,
+                mask=self.mask,
+                name="logits_pw_masked"
+            )
 
             # prediction
-            # shape of pred[batch_size*max_time, ]
-            pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")
-            print("shape of pred_pw:", pred_pw.shape)
-
-            # pred in an normal way,shape is [batch_size, max_time]
-            pred_normal_pw = tf.reshape(
+            pred_pw = tf.cast(tf.argmax(logits_pw, 1), tf.int32, name="pred_pw")   # pred_pw:[batch_size*max_time,]
+            pred_normal_pw = tf.reshape(                    # pred in an normal way,[batch_size, max_time]
                 tensor=pred_pw,
                 shape=(-1, self.max_sentence_size),
-                name="pred_normal"
+                name="pred_normal_pw"
             )
-            print("shape of pred_normal_pw:", pred_normal_pw.shape)
 
-            # one-hot the pred_normal:[batch_size, max_time,class_num]
-            pred_normal_one_hot_pw = tf.one_hot(
+            pred_pw_masked = tf.boolean_mask(  # logits_pw_masked [seq_len1+seq_len2+....+,]
+                tensor=pred_normal_pw,
+                mask=self.mask,
+                name="pred_pw_masked"
+            )
+
+            pred_normal_one_hot_pw = tf.one_hot(            # one-hot the pred_normal:[batch_size, max_time,class_num]
                 indices=pred_normal_pw,
                 depth=self.class_num,
                 name="pred_normal_one_hot_pw"
             )
 
-            # we should use more accurate result to compute loss
-            # depadding
-
             # loss
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
-                labels=tf.reshape(self.y_p_pw, shape=[-1]),
-                logits=logits_pw
+                labels=y_p_pw_masked,
+                logits=logits_pw_masked
             )
             # ---------------------------------------------------------------------------------------
 
@@ -240,20 +269,32 @@ class Attension_Alignment_Seq2Seq():
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_pph"
             )
-            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 5]
+            # logits
+            logits_pph = tf.matmul(h_pph, w_pph) + b_pph  # shape of logits:[batch_size*max_time, 3]
+            logits_normal_pph = tf.reshape(                 # logits in an normal way:[batch_size,max_time_stpes,3]
+                tensor=logits_pph,
+                shape=(-1, self.max_sentence_size, 3),
+                name="logits_normal_pph"
+            )
+            logits_pph_masked = tf.boolean_mask(            # [seq_len1+seq_len2+....+,3]
+                tensor=logits_normal_pph,
+                mask=self.mask,
+                name="logits_pph_masked"
+            )
 
             # prediction
-            # shape of pred[batch_size*max_time, 1]
-            pred_pph = tf.cast(tf.argmax(logits_pph, 1), tf.int32, name="pred_pph")
-
-            # pred in an normal way,shape is [batch_size, max_time,1]
-            pred_normal_pph = tf.reshape(
+            pred_pph = tf.cast(tf.argmax(logits_pph, 1), tf.int32, name="pred_pph")  # pred_pph:[batch_size*max_time,]
+            pred_normal_pph = tf.reshape(                       # pred in an normal way,[batch_size, max_time]
                 tensor=pred_pph,
                 shape=(-1, self.max_sentence_size),
-                name="pred_normal"
+                name="pred_normal_pph"
             )
-            # one-hot the pred_normal:[batch_size, max_time,class_num]
-            pred_normal_one_hot_pph = tf.one_hot(
+            pred_pph_masked = tf.boolean_mask(                  # logits_pph_masked [seq_len1+seq_len2+....+,]
+                tensor=pred_normal_pph,
+                mask=self.mask,
+                name="pred_pph_masked"
+            )
+            pred_normal_one_hot_pph = tf.one_hot(               # one-hot the pred_normal:[batch_size, max_time,class_num]
                 indices=pred_normal_pph,
                 depth=self.class_num,
                 name="pred_normal_one_hot_pph"
@@ -261,8 +302,8 @@ class Attension_Alignment_Seq2Seq():
 
             # loss
             self.loss_pph = tf.losses.sparse_softmax_cross_entropy(
-                labels=tf.reshape(self.y_p_pph, shape=[-1]),
-                logits=logits_pph
+                labels=y_p_pph_masked,
+                logits=logits_pph_masked
             )
             # ------------------------------------------------------------------------------------
 
@@ -311,30 +352,40 @@ class Attension_Alignment_Seq2Seq():
                 initial_value=tf.random_normal(shape=(self.class_num,)),
                 name="bias_iph"
             )
-            logits_iph = tf.matmul(h_iph, w_iph) + b_iph  # shape of logits:[batch_size*max_time, 5]
-
-            # prediction
-            # shape of pred[batch_size*max_time, 1]
-            pred_iph = tf.cast(tf.argmax(logits_iph, 1), tf.int32, name="pred_iph")
-
-            # pred in an normal way,shape is [batch_size, max_time,1]
-            pred_normal_iph = tf.reshape(
-                tensor=pred_iph,
-                shape=(-1, self.max_sentence_size),
-                name="pred_normal"
+            # logits
+            logits_iph = tf.matmul(h_iph, w_iph) + b_iph  # shape of logits:[batch_size*max_time, 3]
+            logits_normal_iph = tf.reshape(                # logits in an normal way:[batch_size,max_time_stpes,3]
+                tensor=logits_iph,
+                shape=(-1, self.max_sentence_size, 3),
+                name="logits_normal_iph"
+            )
+            logits_iph_masked = tf.boolean_mask(  # [seq_len1+seq_len2+....+,3]
+                tensor=logits_normal_iph,
+                mask=self.mask,
+                name="logits_iph_masked"
             )
 
-            # one-hot the pred_normal:[batch_size, max_time,class_num]
-            pred_normal_one_hot_iph = tf.one_hot(
+            # prediction
+            pred_iph = tf.cast(tf.argmax(logits_iph, 1), tf.int32, name="pred_iph")  # pred_iph:[batch_size*max_time,]
+            pred_normal_iph = tf.reshape(  # pred in an normal way,[batch_size, max_time]
+                tensor=pred_iph,
+                shape=(-1, self.max_sentence_size),
+                name="pred_normal_iph"
+            )
+            pred_iph_masked = tf.boolean_mask(  # logits_iph_masked [seq_len1+seq_len2+....+,]
+                tensor=pred_normal_iph,
+                mask=self.mask,
+                name="pred_iph_masked"
+            )
+            pred_normal_one_hot_iph = tf.one_hot(  # one-hot the pred_normal:[batch_size, max_time,class_num]
                 indices=pred_normal_iph,
                 depth=self.class_num,
                 name="pred_normal_one_hot_iph"
             )
-
             # loss
             self.loss_iph = tf.losses.sparse_softmax_cross_entropy(
-                labels=tf.reshape(self.y_p_iph, shape=[-1]),
-                logits=logits_iph
+                labels=y_p_iph_masked,
+                logits=logits_iph_masked
             )
 
             # ---------------------------------------------------------------------------------------
@@ -374,8 +425,12 @@ class Attension_Alignment_Seq2Seq():
 
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
-                    _, train_loss, train_pred_pw, train_pred_pph, train_pred_iph = sess.run(
-                        fetches=[self.optimizer, self.loss, pred_pw, pred_pph, pred_iph],
+                    #注意:这里获取的都是mask之后的值
+                    _, train_loss, y_train_pw_masked,y_train_pph_masked,y_train_iph_masked,\
+                    train_pred_pw, train_pred_pph, train_pred_iph = sess.run(
+                        fetches=[self.optimizer, self.loss,
+                                 y_p_pw_masked,y_p_pph_masked,y_p_iph_masked,
+                                 pred_pw_masked, pred_pph_masked, pred_iph_masked],
                         feed_dict={
                             self.X_p: X_train[i * self.batch_size:(i + 1) * self.batch_size],
                             self.y_p_pw: y_train_pw[i * self.batch_size:(i + 1) * self.batch_size],
@@ -388,23 +443,11 @@ class Attension_Alignment_Seq2Seq():
                     # loss
                     train_losses.append(train_loss)
                     # metrics
-                    # pw
-                    accuracy_pw, f1_1_pw, f1_2_pw = util.eval(
-                        y_true=np.reshape(y_train_pw[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
-                        y_pred=train_pred_pw
-                    )
 
-                    # pph
-                    accuracy_pph, f1_1_pph, f1_2_pph = util.eval(
-                        y_true=np.reshape(y_train_pph[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
-                        y_pred=train_pred_pph
-                    )
+                    accuracy_pw, f1_1_pw, f1_2_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)    # pw
+                    accuracy_pph, f1_1_pph, f1_2_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
+                    accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
-                    # iph
-                    accuracy_iph, f1_1_iph, f1_2_iph = util.eval(
-                        y_true=np.reshape(y_train_iph[i * self.batch_size:(i + 1) * self.batch_size], [-1]),
-                        y_pred=train_pred_iph
-                    )
                     train_accus_pw.append(accuracy_pw)
                     train_accus_pph.append(accuracy_pph)
                     train_accus_iph.append(accuracy_iph)
@@ -417,8 +460,10 @@ class Attension_Alignment_Seq2Seq():
                     c2_f_iph.append(f1_2_iph)
 
                 # validation in every epoch
-                validation_loss, valid_pred_pw, valid_pred_pph, valid_pred_iph = sess.run(
-                    fetches=[self.loss, pred_pw, pred_pph, pred_iph],
+                validation_loss, y_valid_pw_masked,y_valid_pph_masked,y_valid_iph_masked,\
+                valid_pred_pw, valid_pred_pph, valid_pred_iph = sess.run(
+                    fetches=[self.loss, y_p_pw_masked,y_p_pph_masked,y_p_iph_masked,
+                             pred_pw_masked, pred_pph_masked, pred_iph_masked],
                     feed_dict={
                         self.X_p: X_validation,
                         self.y_p_pw: y_validation_pw,
@@ -432,23 +477,9 @@ class Attension_Alignment_Seq2Seq():
                 # print("valid_pred_iph.shape:",valid_pred_iph.shape)
 
                 # metrics
-                # pw
-                valid_accuracy_pw, valid_f1_1_pw, valid_f1_2_pw = util.eval(
-                    y_true=np.reshape(y_validation_pw, [-1]),
-                    y_pred=valid_pred_pw
-                )
-
-                # pph
-                valid_accuracy_pph, valid_f1_1_pph, valid_f1_2_pph = util.eval(
-                    y_true=np.reshape(y_validation_pph, [-1]),
-                    y_pred=valid_pred_pph
-                )
-
-                # iph
-                valid_accuracy_iph, valid_f1_1_iph, valid_f1_2_iph = util.eval(
-                    y_true=np.reshape(y_validation_iph, [-1]),
-                    y_pred=valid_pred_iph
-                )
+                valid_accuracy_pw, valid_f1_1_pw, valid_f1_2_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
+                valid_accuracy_pph, valid_f1_1_pph, valid_f1_2_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
+                valid_accuracy_iph, valid_f1_1_iph, valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
 
                 # show information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
@@ -483,7 +514,7 @@ class Attension_Alignment_Seq2Seq():
                 print("----avarage f1-Score of B:", valid_f1_2_iph)
 
                 # when we get a new best validation accuracy,we store the model
-                if best_validation_loss < validation_loss:
+                if best_validation_loss > validation_loss:
                     best_validation_loss = validation_loss
                     print("New Best loss ", best_validation_loss, " On Validation set! ")
                     print("Saving Models......\n\n")

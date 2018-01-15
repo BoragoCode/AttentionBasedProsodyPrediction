@@ -283,8 +283,6 @@ def make_dataset(in_filename,project_name,out_filename):
     print("         ----saving final dataset <summary_validation.pkl>")
     df_data_validation.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_validation.pkl")
 
-    #print("         ----saving final dataset <summary_test.pkl>")
-    #df_data_test.to_pickle(path="./dataset/"+project_name+"/"+out_filename+"_summary_test.pkl")
     duration=time.time()-start_time;
     print("END! this operation spends ",round(duration/60,2)," mins")
 
@@ -304,13 +302,13 @@ if __name__=="__main__":
     print("[5]-->trans corpus to IPH format......")
     toIPH("./data/corpus/prosody.txt")
 
-    #print("[6]-->trans corpus_pw to dataset......")
+    print("[6]-->trans corpus_pw to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_pw.txt",project_name="temptest",out_filename="pw")
 
-    #print("[7]-->trans corpus_pph to dataset......")
+    print("[7]-->trans corpus_pph to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_pph.txt", project_name="temptest", out_filename="pph")
 
-    #print("[8]-->trans corpus_iph to dataset......")
+    print("[8]-->trans corpus_iph to dataset......")
     make_dataset(in_filename="./data/corpus/prosody_iph.txt", project_name="temptest", out_filename="iph")
 
 
