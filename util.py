@@ -87,6 +87,8 @@ def recover(X,preds_pw,preds_pph,preds_iph,filename):
     f.close()
 
 if __name__ =="__main__":
+    #测试
+
     a=np.array([1,2,3,4,0,5,6,7,1,1,2,1,0])
     print(a)
     result=binarize(sequence=a,positive_value=1)

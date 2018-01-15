@@ -12,7 +12,7 @@ import os
 import parameter
 import util
 
-class Attension_Alignment_Seq2Seq():
+class Alignment_Seq2Seq():
     def __init__(self):
         # basic environment
         self.graph = tf.Graph()
@@ -41,32 +41,32 @@ class Attension_Alignment_Seq2Seq():
             dtype=tf.float32,
             scope=scope_name
         )
+
         outputs_forward = outputs[0]  # shape of h is [batch_size, max_time, cell_fw.output_size]
         outputs_backward = outputs[1]  # shape of h is [batch_size, max_time, cell_bw.output_size]
-        # shape of h is [batch_size, max_time, cell_fw.output_size*2]
-        encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
-
-        states_forward = states[0]  # .c:[batch_size,cell_fw.output_size]   .h:[batch_size,cell_fw.output_size]
+        states_forward = states[0]  # .c:[batch_size,num_units]   .h:[batch_size,num_units]
         states_backward = states[1]
-        print(type(states_forward))
-        # shape of encoder_states_concat[2,batch_size,cell_fw.output_size*2]
-        # encoder_states_concat = tf.concat([states_forward, states_backward], axis=2)
-        # print(encoder_states_concat)
-        # encoder_states=[encoder_states_concat[0],encoder_states_concat[1]]
-        # encoder_states=tuple(encoder_states)
-        # print(type(encoder_states))
-        return encoder_outputs, states_forward
+        #concat final outputs [batch_size, max_time, cell_fw.output_size*2]
+        encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
+        #concat final states
+        state_h_concat=tf.concat(values=[states_forward.h,states_backward.h],axis=1,name="state_h_concat")
+        print("state_h_concat:",state_h_concat)
+        state_c_concat=tf.concat(values=[states_forward.c,states_backward.c],axis=1,name="state_c_concat")
+        print("state_c_concat:",state_c_concat)
+        encoder_states=rnn.LSTMStateTuple(c=state_c_concat,h=state_h_concat)
+
+        return encoder_outputs, encoder_states
 
     def decoder(self, cell, initial_state, inputs, scope_name):
+        # outputs:[batch_size,time_steps,hidden_size*2]
         outputs, states = tf.nn.dynamic_rnn(
             cell=cell,
             inputs=inputs,
-            # sequence_length=seq_length,
             initial_state=initial_state,
             scope=scope_name
         )
-        # outputs      #[batch_size,time_steps,hidden_size*2]
-        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num))
+        #[batch_size*time_steps,hidden_size*2]
+        decoder_outputs = tf.reshape(tensor=outputs, shape=(-1, self.hidden_units_num*2))
         return decoder_outputs
 
     # forward process and training process
@@ -157,7 +157,7 @@ class Attension_Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
 
             # decoder cells
-            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            de_lstm_pw = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
 
             # encode
             encoder_outputs_pw, encoder_states_pw = self.encoder(
@@ -167,16 +167,17 @@ class Attension_Alignment_Seq2Seq():
                 seq_length=self.seq_len_p,
                 scope_name="en_lstm_pw"
             )
-            # shape of h is [batch*time_steps,hidden_units]
-            h_pw = self.decoder(
+            # decode
+            h_pw = self.decoder(                    # shape of h is [batch*time_steps,hidden_units*2]
                 cell=de_lstm_pw,
                 initial_state=encoder_states_pw,
                 inputs=encoder_outputs_pw,
                 scope_name="de_lstm_pw"
             )
+
             # fully connect layer(projection)
             w_pw = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
                 name="weights_pw"
             )
             b_pw = tf.Variable(
@@ -242,7 +243,7 @@ class Attension_Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
 
             # decoder cells
-            de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            de_lstm_pph = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
 
             # encode
             encoder_outputs_pph, encoder_states_pph = self.encoder(
@@ -252,7 +253,7 @@ class Attension_Alignment_Seq2Seq():
                 seq_length=self.seq_len_p,
                 scope_name="en_lstm_pph"
             )
-            # shape of h is [batch*time_steps,hidden_units]
+            # shape of h is [batch*time_steps,hidden_units*2]
             h_pph = self.decoder(
                 cell=de_lstm_pph,
                 initial_state=encoder_states_pph,
@@ -262,7 +263,7 @@ class Attension_Alignment_Seq2Seq():
 
             # fully connect layer(projection)
             w_pph = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
                 name="weights_pph"
             )
             b_pph = tf.Variable(
@@ -325,7 +326,7 @@ class Attension_Alignment_Seq2Seq():
             # en_lstm_backward=rnn.MultiRNNCell(cells=[en_lstm_backward1,en_lstm_backward2])
 
             # decoder cells
-            de_lstm_iph = rnn.BasicLSTMCell(num_units=self.hidden_units_num)
+            de_lstm_iph = rnn.BasicLSTMCell(num_units=self.hidden_units_num*2)
 
             # encode
             encoder_outputs_iph, encoder_states_iph = self.encoder(
@@ -335,7 +336,7 @@ class Attension_Alignment_Seq2Seq():
                 seq_length=self.seq_len_p,
                 scope_name="en_lstm_iph"
             )
-            # shape of h is [batch*time_steps,hidden_units]
+            # shape of h is [batch*time_steps,hidden_units*2]
             h_iph = self.decoder(
                 cell=de_lstm_iph,
                 initial_state=encoder_states_iph,
@@ -345,7 +346,7 @@ class Attension_Alignment_Seq2Seq():
 
             # fully connect layer(projection)
             w_iph = tf.Variable(
-                initial_value=tf.random_normal(shape=(self.hidden_units_num2, self.class_num)),
+                initial_value=tf.random_normal(shape=(self.hidden_units_num*2, self.class_num)),
                 name="weights_iph"
             )
             b_iph = tf.Variable(
@@ -399,12 +400,12 @@ class Attension_Alignment_Seq2Seq():
         # ------------------------------------Session-----------------------------------------
         with self.session as sess:
             print("Training Start")
-            sess.run(self.init_op)  # initialize all variables
+            sess.run(self.init_op)                  # initialize all variables
             sess.run(self.init_local_op)
 
             train_Size = X_train.shape[0];
             validation_Size = X_validation.shape[0]
-            best_validation_loss = 0  # best validation accuracy in training process
+            best_validation_loss = 1000                # best validation accuracy in training process
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -514,7 +515,7 @@ class Attension_Alignment_Seq2Seq():
                 print("----avarage f1-Score of B:", valid_f1_2_iph)
 
                 # when we get a new best validation accuracy,we store the model
-                if best_validation_loss > validation_loss:
+                if best_validation_loss < validation_loss:
                     best_validation_loss = validation_loss
                     print("New Best loss ", best_validation_loss, " On Validation set! ")
                     print("Saving Models......\n\n")
@@ -644,5 +645,5 @@ if __name__ == "__main__":
     # print("y_train_iph:\n", y_train_iph);
     # print(y_train_iph.shape)
 
-    model = Attension_Alignment_Seq2Seq()
+    model = Alignment_Seq2Seq()
     model.fit(X_train, y_train, len_train, X_validation, y_validation, len_validation, "test", False)
