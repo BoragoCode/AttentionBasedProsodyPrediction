@@ -412,17 +412,17 @@ class Alignment_Seq2Seq():
                 print("Epoch:", epoch)
                 start_time = time.time()  # time evaluation
                 # training loss/accuracy in every mini-batch
-                train_losses = []
-                train_accus_pw = []
-                train_accus_pph = []
-                train_accus_iph = []
+                self.train_losses = []
+                self.train_accus_pw = []
+                self.train_accus_pph = []
+                self.train_accus_iph = []
 
-                c1_f_pw = [];
-                c2_f_pw = []  # each class's f1 score
-                c1_f_pph = [];
-                c2_f_pph = []
-                c1_f_iph = [];
-                c2_f_iph = []
+                self.c1_f_pw = [];
+                self.c2_f_pw = []  # each class's f1 score
+                self.c1_f_pph = [];
+                self.c2_f_pph = []
+                self.c1_f_iph = [];
+                self.c2_f_iph = []
 
                 # mini batch
                 for i in range(0, (train_Size // self.batch_size)):
@@ -442,26 +442,26 @@ class Alignment_Seq2Seq():
                     )
 
                     # loss
-                    train_losses.append(train_loss)
+                    self.train_losses.append(train_loss)
                     # metrics
 
                     accuracy_pw, f1_1_pw, f1_2_pw = util.eval(y_true=y_train_pw_masked,y_pred=train_pred_pw)    # pw
                     accuracy_pph, f1_1_pph, f1_2_pph = util.eval(y_true=y_train_pph_masked,y_pred=train_pred_pph)   # pph
                     accuracy_iph, f1_1_iph, f1_2_iph = util.eval(y_true=y_train_iph_masked,y_pred=train_pred_iph)   # iph
 
-                    train_accus_pw.append(accuracy_pw)
-                    train_accus_pph.append(accuracy_pph)
-                    train_accus_iph.append(accuracy_iph)
+                    self.train_accus_pw.append(accuracy_pw)
+                    self.train_accus_pph.append(accuracy_pph)
+                    self.train_accus_iph.append(accuracy_iph)
                     # F1-score
-                    c1_f_pw.append(f1_1_pw);
-                    c2_f_pw.append(f1_2_pw)
-                    c1_f_pph.append(f1_1_pph);
-                    c2_f_pph.append(f1_2_pph)
-                    c1_f_iph.append(f1_1_iph);
-                    c2_f_iph.append(f1_2_iph)
+                    self.c1_f_pw.append(f1_1_pw);
+                    self.c2_f_pw.append(f1_2_pw)
+                    self.c1_f_pph.append(f1_1_pph);
+                    self.c2_f_pph.append(f1_2_pph)
+                    self.c1_f_iph.append(f1_1_iph);
+                    self.c2_f_iph.append(f1_2_iph)
 
                 # validation in every epoch
-                validation_loss, y_valid_pw_masked,y_valid_pph_masked,y_valid_iph_masked,\
+                self.validation_loss, y_valid_pw_masked,y_valid_pph_masked,y_valid_iph_masked,\
                 valid_pred_pw, valid_pred_pph, valid_pred_iph = sess.run(
                     fetches=[self.loss, y_p_pw_masked,y_p_pph_masked,y_p_iph_masked,
                              pred_pw_masked, pred_pph_masked, pred_iph_masked],
@@ -478,41 +478,14 @@ class Alignment_Seq2Seq():
                 # print("valid_pred_iph.shape:",valid_pred_iph.shape)
 
                 # metrics
-                valid_accuracy_pw, valid_f1_1_pw, valid_f1_2_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
-                valid_accuracy_pph, valid_f1_1_pph, valid_f1_2_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
-                valid_accuracy_iph, valid_f1_1_iph, valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
+                self.valid_accuracy_pw, self.valid_f1_1_pw, self.valid_f1_2_pw = util.eval(y_true=y_valid_pw_masked,y_pred=valid_pred_pw)
+                self.valid_accuracy_pph, self.valid_f1_1_pph, self.valid_f1_2_pph = util.eval(y_true=y_valid_pph_masked,y_pred=valid_pred_pph)
+                self.valid_accuracy_iph, self.valid_f1_1_iph, self.valid_f1_2_iph = util.eval(y_true=y_valid_iph_masked,y_pred=valid_pred_iph)
 
-                # show information
+                #print information
                 print("Epoch ", epoch, " finished.", "spend ", round((time.time() - start_time) / 60, 2), " mins")
-                print("                             /**Training info**/")
-                print("----avarage training loss:", sum(train_losses) / len(train_losses))
-                print("PW:")
-                print("----avarage accuracy:", sum(train_accus_pw) / len(train_accus_pw))
-                print("----avarage f1-Score of N:", sum(c1_f_pw) / len(c1_f_pw))
-                print("----avarage f1-Score of B:", sum(c2_f_pw) / len(c2_f_pw))
-                print("PPH:")
-                print("----avarage accuracy :", sum(train_accus_pph) / len(train_accus_pph))
-                print("----avarage f1-Score of N:", sum(c1_f_pph) / len(c1_f_pph))
-                print("----avarage f1-Score of B:", sum(c2_f_pph) / len(c2_f_pph))
-                print("IPH:")
-                print("----avarage accuracy:", sum(train_accus_iph) / len(train_accus_iph))
-                print("----avarage f1-Score of N:", sum(c1_f_iph) / len(c1_f_iph))
-                print("----avarage f1-Score of B:", sum(c2_f_iph) / len(c2_f_iph))
-
-                print("                             /**Validation info**/")
-                print("----avarage validation loss:", validation_loss)
-                print("PW:")
-                print("----avarage accuracy:", valid_accuracy_pw)
-                print("----avarage f1-Score of N:", valid_f1_1_pw)
-                print("----avarage f1-Score of B:", valid_f1_2_pw)
-                print("PPH:")
-                print("----avarage accuracy :", valid_accuracy_pph)
-                print("----avarage f1-Score of N:", valid_f1_1_pph)
-                print("----avarage f1-Score of B:", valid_f1_2_pph)
-                print("IPH:")
-                print("----avarage accuracy:", valid_accuracy_iph)
-                print("----avarage f1-Score of N:", valid_f1_1_iph)
-                print("----avarage f1-Score of B:", valid_f1_2_iph)
+                self.showInfo(type="training")
+                self.showInfo(type="validation")
 
                 # when we get a new best validation accuracy,we store the model
                 if best_validation_loss < validation_loss:
@@ -587,11 +560,39 @@ class Alignment_Seq2Seq():
                 print("this operation spends ", round((time.time() - start_time) / 60, 2), " mins")
                 return accu
 
+
     def showInfo(self, type):
         if tpye == "training":
-            pass
+            # training information
+            print("                             /**Training info**/")
+            print("----avarage training loss:", sum(self.train_losses) / len(self.train_losses))
+            print("PW:")
+            print("----avarage accuracy:", sum(self.train_accus_pw) / len(self.train_accus_pw))
+            print("----avarage f1-Score of N:", sum(self.c1_f_pw) / len(self.c1_f_pw))
+            print("----avarage f1-Score of B:", sum(self.c2_f_pw) / len(self.c2_f_pw))
+            print("PPH:")
+            print("----avarage accuracy :", sum(self.train_accus_pph) / len(self.train_accus_pph))
+            print("----avarage f1-Score of N:", sum(self.c1_f_pph) / len(self.c1_f_pph))
+            print("----avarage f1-Score of B:", sum(self.c2_f_pph) / len(self.c2_f_pph))
+            print("IPH:")
+            print("----avarage accuracy:", sum(self.train_accus_iph) / len(self.train_accus_iph))
+            print("----avarage f1-Score of N:", sum(self.c1_f_iph) / len(self.c1_f_iph))
+            print("----avarage f1-Score of B:", sum(self.c2_f_iph) / len(self.c2_f_iph))
         else:
-            pass
+            print("                             /**Validation info**/")
+            print("----avarage validation loss:", self.validation_loss)
+            print("PW:")
+            print("----avarage accuracy:", self.valid_accuracy_pw)
+            print("----avarage f1-Score of N:", self.valid_f1_1_pw)
+            print("----avarage f1-Score of B:", self.valid_f1_2_pw)
+            print("PPH:")
+            print("----avarage accuracy :", self.valid_accuracy_pph)
+            print("----avarage f1-Score of N:", self.valid_f1_1_pph)
+            print("----avarage f1-Score of B:", self.valid_f1_2_pph)
+            print("IPH:")
+            print("----avarage accuracy:", self.valid_accuracy_iph)
+            print("----avarage f1-Score of N:", self.valid_f1_1_iph)
+            print("----avarage f1-Score of B:", self.valid_f1_2_iph)
 
 
 # train && test
