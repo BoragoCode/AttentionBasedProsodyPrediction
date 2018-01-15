@@ -1,6 +1,6 @@
 # Attension Based Chinese Prosody Prediction
 
-##**Requirements**
+## **Requirements**
 >python3.5+
 
 >tensorflow>=1.4
@@ -10,6 +10,11 @@
 >pandas
 
 >scikit-learn
+
+## **File Description**
+`alignment.py`:prosody prediction with alignment model
+
+`data_processing.py`:conver corpus and make dataset format.
 
 
 ## **Steps**
