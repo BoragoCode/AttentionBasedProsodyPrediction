@@ -405,7 +405,7 @@ class Alignment_Seq2Seq():
 
             train_Size = X_train.shape[0];
             validation_Size = X_validation.shape[0]
-            best_validation_loss = 1000                # best validation accuracy in training process
+            self.best_validation_loss = 1000                # best validation accuracy in training process
 
             # epoch
             for epoch in range(1, self.max_epoch + 1):
@@ -488,9 +488,9 @@ class Alignment_Seq2Seq():
                 self.showInfo(type="validation")
 
                 # when we get a new best validation accuracy,we store the model
-                if best_validation_loss < validation_loss:
-                    best_validation_loss = validation_loss
-                    print("New Best loss ", best_validation_loss, " On Validation set! ")
+                if self.best_validation_loss < self.validation_loss:
+                    self.best_validation_loss = self.validation_loss
+                    print("New Best loss ", self.best_validation_loss, " On Validation set! ")
                     print("Saving Models......\n\n")
                     # exist ./models folder?
                     if not os.path.exists("./models/"):
@@ -562,7 +562,7 @@ class Alignment_Seq2Seq():
 
 
     def showInfo(self, type):
-        if tpye == "training":
+        if type == "training":
             # training information
             print("                             /**Training info**/")
             print("----avarage training loss:", sum(self.train_losses) / len(self.train_losses))
