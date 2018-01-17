@@ -29,6 +29,9 @@ class Alignment_Seq2Seq():
         self.max_sentence_size = parameter.MAX_SENTENCE_SIZE
         self.vocab_size = parameter.VOCAB_SIZE
         self.batch_size = parameter.BATCH_SIZE
+        self.lambda_pw=parameter.LAMBDA_PW
+        self.lambda_pph=parameter.LAMBDA_PPH
+        self.lambda_iph=parameter.LAMBDA_IPH
 
     # encoder,传入是前向和后向的cell,还有inputs
     # 输出是
@@ -50,9 +53,9 @@ class Alignment_Seq2Seq():
         encoder_outputs = tf.concat(values=[outputs_forward, outputs_backward], axis=2)
         #concat final states
         state_h_concat=tf.concat(values=[states_forward.h,states_backward.h],axis=1,name="state_h_concat")
-        print("state_h_concat:",state_h_concat)
+        #print("state_h_concat:",state_h_concat)
         state_c_concat=tf.concat(values=[states_forward.c,states_backward.c],axis=1,name="state_c_concat")
-        print("state_c_concat:",state_c_concat)
+        #print("state_c_concat:",state_c_concat)
         encoder_states=rnn.LSTMStateTuple(c=state_c_concat,h=state_h_concat)
 
         return encoder_outputs, encoder_states
@@ -221,7 +224,7 @@ class Alignment_Seq2Seq():
             self.loss_pw = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pw_masked,
                 logits=logits_pw_masked
-            )
+            )+tf.contrib.layers.l2_regularizer(self.lambda_pw)(w_pw)
             # ---------------------------------------------------------------------------------------
 
             # ----------------------------------PPH--------------------------------------------------
@@ -305,7 +308,7 @@ class Alignment_Seq2Seq():
             self.loss_pph = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_pph_masked,
                 logits=logits_pph_masked
-            )
+            )+tf.contrib.layers.l2_regularizer(self.lambda_pph)(w_pph)
             # ------------------------------------------------------------------------------------
 
             # ---------------------------------------IPH------------------------------------------
@@ -387,7 +390,7 @@ class Alignment_Seq2Seq():
             self.loss_iph = tf.losses.sparse_softmax_cross_entropy(
                 labels=y_p_iph_masked,
                 logits=logits_iph_masked
-            )
+            )+tf.contrib.layers.l2_regularizer(self.lambda_iph)(w_iph)
 
             # ---------------------------------------------------------------------------------------
             # loss
